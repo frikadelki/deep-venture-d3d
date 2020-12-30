@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:web_gl' as gl;
 
 import 'package:vector_math/vector_math.dart';
@@ -61,6 +62,14 @@ void main() {
 );
 
 class TestScene_02 {
+  static final ZNear = 0.001;
+
+  static final ZFar = 10.0;
+
+  static final FovYDegrees = 110.0;
+
+  static final FovYRadians = math.pi * FovYDegrees / 180.0;
+
   final gl.RenderingContext _glContext;
 
   final List<gl.Buffer> _buffers;
@@ -94,9 +103,9 @@ class TestScene_02 {
 
     final camera = Camera();
     camera.setLookAt(
-      Vector3.zero()..setValues(0.0, 0.0,  0.0),
-      Vector3.zero()..setValues(0.0, 0.0, -1.0),
-      Vector3.zero()..setValues(0.0, 1.0,  0.0));
+      Vector3.zero()..setValues(0.6, 0.0, 1.0),
+      Vector3.zero()..setValues(0.5, 0.0, 0.0),
+      Vector3.zero()..setValues(0.0, 1.0, 0.0));
 
     final program = Program(glContext, TestProgram_01_Source);
     program.getUniform('viewProjectionMatrix').data = Matrix4UniformData(
@@ -107,7 +116,7 @@ class TestScene_02 {
         gl.WebGL.ELEMENT_ARRAY_BUFFER, cubeMeshIndicesBuffer);
       glContext.drawElements(
         gl.WebGL.TRIANGLES,
-        cubeMesh.indices!.length ~/ 3,
+        cubeMesh.indices!.length,
         gl.WebGL.UNSIGNED_SHORT,
         0);
     });
@@ -116,7 +125,8 @@ class TestScene_02 {
   }
 
   void resize(int width, int height) {
-    _camera.setOrthographic(width, height);
+    final aspectRatio = width / height;
+    _camera.setPerspective(FovYRadians, aspectRatio, ZNear, ZFar);
   }
 
   void draw() {
