@@ -3,6 +3,7 @@ import 'dart:web_gl' as gl;
 
 import 'package:dvwd3d_app/render_root.dart';
 import 'package:dvwd3d_app/test_scene_01.dart';
+import 'package:dvwd3d_app/test_scene_02.dart';
 
 void main() {
   html.CanvasElement findCanvas(String selectors) {
@@ -10,7 +11,8 @@ void main() {
     return element as html.CanvasElement;
   }
   final canvas = findCanvas('#main-render-canvas');
-  runRenderOnCanvas(canvas, (glContext) => TestRender01(glContext));
+  //runRenderOnCanvas(canvas, (glContext) => TestRender01(glContext));
+  runRenderOnCanvas(canvas, (glContext) => TestRender02(glContext));
 }
 
 void runRenderOnCanvas(
@@ -20,7 +22,13 @@ void runRenderOnCanvas(
   final delegate = renderFactory(glContext);
 
   void resize() {
-    delegate.resize(canvas.width ?? 128, canvas.height ?? 128);
+    final cssPixelsWidth = canvas.clientWidth;
+    final cssPixelsHeight = canvas.clientHeight;
+
+    canvas.width = cssPixelsWidth;
+    canvas.height = cssPixelsHeight;
+
+    delegate.resize(cssPixelsWidth, cssPixelsHeight);
   }
   canvas.onResize.forEach((element) {
     resize();

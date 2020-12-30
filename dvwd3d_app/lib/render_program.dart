@@ -1,11 +1,48 @@
 import 'dart:web_gl' as gl;
 
+import 'package:vector_math/vector_math.dart';
+
 class ProgramException implements Exception {
   final String reason;
 
   final String infoLog;
 
   ProgramException(this.reason, this.infoLog);
+}
+
+abstract class UniformData {
+  void _bind(gl.RenderingContext glContext, gl.UniformLocation location);
+}
+
+class Matrix4UniformData extends UniformData {
+  final Matrix4 matrix;
+
+  Matrix4UniformData(this.matrix);
+
+  @override
+  void _bind(gl.RenderingContext glContext, gl.UniformLocation location) {
+    glContext.uniformMatrix4fv(location, false, matrix.storage);
+  }
+}
+
+class Uniform {
+  final gl.RenderingContext _glContext;
+
+  final String name;
+
+  final gl.UniformLocation _location;
+
+  UniformData? data;
+
+  Uniform(this._glContext, this.name, this._location);
+
+  void _set() {
+    final data = this.data;
+    if (data == null) {
+      return;
+    }
+    data._bind(_glContext, _location);
+  }
 }
 
 enum VertexAttributeType {
@@ -43,6 +80,11 @@ extension VertexAttributeSizeExt on VertexAttributeSize {
       case VertexAttributeSize.Four:
         return 4;
     }
+  }
+
+  static VertexAttributeSize fromSize(int size) {
+    return VertexAttributeSize.values
+      .firstWhere((element) => element.size == size);
   }
 }
 
@@ -117,6 +159,17 @@ class DrawArraysTrianglesCall implements DrawCalls {
   }
 }
 
+class CustomDrawCalls implements DrawCalls {
+  final void Function(gl.RenderingContext glContext) _draw;
+
+  CustomDrawCalls(this._draw);
+
+  @override
+  void draw(gl.RenderingContext glContext) {
+    _draw(glContext);
+  }
+}
+
 class ProgramSource {
   final String name;
 
@@ -134,6 +187,8 @@ class Program {
 
   final _builder = _ProgramBuilder();
 
+  final _uniforms = <String, Uniform>{ };
+  
   final _vertexAttributes = <String, VertexAttribute>{ };
   
   DrawCalls? drawCalls;
@@ -141,6 +196,14 @@ class Program {
   Program(this._glContext, this.source) {
     _builder.build(_glContext, source);
     assert(_builder.isReady);
+  }
+
+  Uniform getUniform(String name) {
+    _checkDisposed('Attempting to search for uniform "$name".');
+    return _uniforms.putIfAbsent(name, () {
+      final location = _glContext.getUniformLocation(_builder.program!, name);
+      return Uniform(_glContext, name, location);
+    });
   }
 
   VertexAttribute getVertexAttribute(String name) {
@@ -164,6 +227,9 @@ class Program {
     for (final attribute in _vertexAttributes.values) {
       attribute._enable();
     }
+    for (final uniform in _uniforms.values) {
+      uniform._set();
+    }
     drawCalls.draw(_glContext);
     for (final attribute in _vertexAttributes.values) {
       attribute._disable();
@@ -174,6 +240,7 @@ class Program {
     _checkDisposed('Attempting to dispose.');
     _builder.dispose(_glContext);
     _vertexAttributes.clear();
+    _uniforms.clear();
   }
 
   void _checkDisposed([ String info = '<no info>' ]) {
