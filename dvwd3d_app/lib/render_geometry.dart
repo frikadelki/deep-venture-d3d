@@ -24,10 +24,19 @@ extension MeshGeometryUtils on MeshGeometry {
       throw ArgumentError(
         'Mesh did not contain "$_A_NAME_POSITION" attribute.');
     }
-    return _extract(buffer, attrib);
+    return _extractAttribute(buffer, attrib);
   }
 
-  VertexAttributeData _extract(gl.Buffer buffer, VertexAttrib attrib) {
+  VertexAttributeData extractNormals(gl.Buffer buffer) {
+    final attrib = getAttrib(_A_NAME_NORMAL);
+    if (attrib == null) {
+      throw ArgumentError(
+        'Mesh did not contain "$_A_NAME_NORMAL" attribute.');
+    }
+    return _extractAttribute(buffer, attrib);
+  }
+
+  VertexAttributeData _extractAttribute(gl.Buffer buffer, VertexAttrib attrib) {
     return VertexAttributeData(
       buffer,
       VertexAttributeSizeExt.fromSize(attrib.size),
@@ -42,5 +51,13 @@ extension MeshGeometryUtils on MeshGeometry {
         'Unknown type "${attrib.type}" for "${attrib.name}" attribute.');
     }
     return VertexAttributeType.Float;
+  }
+
+  void bindIndicesData(gl.RenderingContext glContext, gl.Buffer buffer) {
+    IndicesArrayData.setStaticDrawUi16L(glContext, buffer, indices!);
+  }
+
+  IndicesArrayData extractIndicesData(gl.Buffer buffer) {
+    return IndicesArrayData(buffer, indices!.length);
   }
 }

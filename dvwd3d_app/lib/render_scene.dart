@@ -8,6 +8,8 @@ class Camera {
 
   final _eyePosition = Vector3.zero();
 
+  Vector3 get eyePosition => _eyePosition;
+
   final _computedViewProjectionMatrix = Matrix4.identity();
 
   Matrix4 get viewProjectionMatrix => _computedViewProjectionMatrix;

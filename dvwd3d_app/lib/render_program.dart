@@ -1,6 +1,8 @@
+import 'dart:typed_data';
 import 'dart:web_gl' as gl;
 
 import 'package:vector_math/vector_math.dart';
+import 'package:vector_math/vector_math_lists.dart';
 
 class ProgramException implements Exception {
   final String reason;
@@ -12,6 +14,50 @@ class ProgramException implements Exception {
 
 abstract class UniformData {
   void _bind(gl.RenderingContext glContext, gl.UniformLocation location);
+}
+
+class Vector3UniformData implements UniformData {
+  final Vector3 data;
+
+  Vector3UniformData(this.data);
+
+  @override
+  void _bind(gl.RenderingContext glContext, gl.UniformLocation location) {
+    glContext.uniform3fv(location, data.storage);
+  }
+}
+
+class Vector3ListUniformData implements UniformData {
+  final Vector3List data;
+
+  Vector3ListUniformData(this.data);
+
+  @override
+  void _bind(gl.RenderingContext glContext, gl.UniformLocation location) {
+    glContext.uniform3fv(location, data.buffer);
+  }
+}
+
+class Vector4UniformData implements UniformData {
+  final Vector4 data;
+
+  Vector4UniformData(this.data);
+
+  @override
+  void _bind(gl.RenderingContext glContext, gl.UniformLocation location) {
+    glContext.uniform4fv(location, data.storage);
+  }
+}
+
+class Vector4ListUniformData implements UniformData {
+  final Vector4List data;
+
+  Vector4ListUniformData(this.data);
+
+  @override
+  void _bind(gl.RenderingContext glContext, gl.UniformLocation location) {
+    glContext.uniform4fv(location, data.buffer);
+  }
 }
 
 class Matrix4UniformData extends UniformData {
@@ -142,6 +188,45 @@ class VertexAttribute {
   }
 }
 
+class IndicesArrayData {
+  final gl.Buffer buffer;
+
+  final int dataLength;
+
+  IndicesArrayData(this.buffer, this.dataLength);
+
+  static void setStaticDrawUi16L(
+    gl.RenderingContext glContext,
+    gl.Buffer buffer,
+    Uint16List actualData) {
+    glContext.bindBuffer(gl.WebGL.ELEMENT_ARRAY_BUFFER, buffer);
+    glContext.bufferData(
+      gl.WebGL.ELEMENT_ARRAY_BUFFER, actualData, gl.WebGL.STATIC_DRAW);
+  }
+}
+
+class IndicesArray {
+  final gl.RenderingContext _glContext;
+
+  IndicesArrayData? data;
+
+  IndicesArray(this._glContext);
+
+  void drawAllTriangles() {
+    final data = this.data;
+    if (data == null) {
+      assert(false);
+      return;
+    }
+    _glContext.bindBuffer(gl.WebGL.ELEMENT_ARRAY_BUFFER, data.buffer);
+    _glContext.drawElements(
+      gl.WebGL.TRIANGLES,
+      data.dataLength,
+      gl.WebGL.UNSIGNED_SHORT,
+      0);
+  }
+}
+
 abstract class DrawCalls {
   void draw(gl.RenderingContext glContext);
 }
@@ -180,7 +265,13 @@ class ProgramSource {
   ProgramSource(this.name, this.vertexShaderSource, this.fragmentShaderSource);
 }
 
-class Program {
+abstract class ProgramVarsLocator {
+  Uniform getUniform(String name);
+
+  VertexAttribute getVertexAttribute(String name);
+}
+
+class Program implements ProgramVarsLocator {
   final gl.RenderingContext _glContext;
 
   final ProgramSource source;
@@ -198,6 +289,7 @@ class Program {
     assert(_builder.isReady);
   }
 
+  @override
   Uniform getUniform(String name) {
     _checkDisposed('Attempting to search for uniform "$name".');
     return _uniforms.putIfAbsent(name, () {
@@ -206,6 +298,7 @@ class Program {
     });
   }
 
+  @override
   VertexAttribute getVertexAttribute(String name) {
     _checkDisposed('Attempting to search for vertex attribute "$name".');
     return _vertexAttributes.putIfAbsent(name, () {
