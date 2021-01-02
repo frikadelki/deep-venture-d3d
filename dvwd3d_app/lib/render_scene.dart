@@ -1,6 +1,8 @@
 
 import 'package:vector_math/vector_math.dart';
 
+import 'render_program.dart';
+
 class Camera {
   final _viewMatrix = Matrix4.identity();
 
@@ -61,5 +63,31 @@ class Camera {
       zNear,
       zFar);
     _updateViewProjection();
+  }
+}
+
+abstract class MeshData {
+  VertexAttributeData get positionsData;
+
+  VertexAttributeData get normalsData;
+
+  IndicesArrayData get indices;
+}
+
+abstract class RenderObject {
+  Matrix4UniformData get modelMatrixData;
+
+  Matrix4UniformData get normalsMatrixData;
+
+  MeshData get meshData;
+}
+
+class Transform {
+  final modelMatrix = Matrix4.identity();
+
+  final normalsMatrix = Matrix4.identity();
+
+  void translate({double dx = 0.0, double dy = 0.0, double dz = 0.0}) {
+    modelMatrix.translate(dx, dy, dz);
   }
 }

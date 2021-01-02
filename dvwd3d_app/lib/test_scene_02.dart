@@ -4,7 +4,7 @@ import 'dart:web_gl' as gl;
 import 'package:vector_math/vector_math.dart';
 
 import 'render_lights.dart';
-import 'render_objects.dart';
+import 'render_primitives.dart';
 import 'render_program.dart';
 import 'render_root.dart';
 import 'render_scene.dart';

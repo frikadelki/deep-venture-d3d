@@ -1,30 +1,10 @@
 import 'dart:web_gl' as gl;
 
-import 'package:vector_math/vector_math.dart';
 import 'package:vector_math/vector_math_geometry.dart';
 
 import 'render_geometry.dart';
 import 'render_program.dart';
-
-abstract class DisposableBuffers {
-  void disposeBuffers(gl.RenderingContext glContext);
-}
-
-abstract class MeshData {
-  VertexAttributeData get positionsData;
-
-  VertexAttributeData get normalsData;
-
-  IndicesArrayData get indices;
-}
-
-abstract class RenderObject {
-  Matrix4UniformData get modelMatrixData;
-
-  Matrix4UniformData get normalsMatrixData;
-
-  MeshData get meshData;
-}
+import 'render_scene.dart';
 
 class CubeMeshData implements MeshData, DisposableBuffers {
   final gl.Buffer _attributesGlBuffer;
@@ -70,16 +50,6 @@ class CubeMeshData implements MeshData, DisposableBuffers {
   void disposeBuffers(gl.RenderingContext glContext) {
     glContext.deleteBuffer(_attributesGlBuffer);
     glContext.deleteBuffer(_indicesGlBuffer);
-  }
-}
-
-class Transform {
-  final modelMatrix = Matrix4.identity();
-
-  final normalsMatrix = Matrix4.identity();
-
-  void translate({double dx = 0.0, double dy = 0.0, double dz = 0.0}) {
-    modelMatrix.translate(dx, dy, dz);
   }
 }
 
