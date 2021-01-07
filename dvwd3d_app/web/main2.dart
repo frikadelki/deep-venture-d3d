@@ -4,6 +4,7 @@ import 'dart:web_gl' as gl;
 import 'package:dvwd3d_app/render_root.dart';
 import 'package:dvwd3d_app/test_scene_01.dart';
 import 'package:dvwd3d_app/test_scene_02.dart';
+import 'package:dvwd3d_app/test_scene_03.dart';
 
 void main() {
   html.CanvasElement findCanvas(String selectors) {
@@ -12,7 +13,8 @@ void main() {
   }
   final canvas = findCanvas('#main-render-canvas');
   //runRenderOnCanvas(canvas, (glContext) => TestRender01(glContext));
-  runRenderOnCanvas(canvas, (glContext) => TestRender02(glContext));
+  //runRenderOnCanvas(canvas, (glContext) => TestRender02(glContext));
+  runRenderOnCanvas(canvas, (glContext) => TestRender03(glContext));
 }
 
 void runRenderOnCanvas(
