@@ -14,14 +14,14 @@ void main() {
   final canvas = findCanvas('#main-render-canvas');
   //runRenderOnCanvas(canvas, (glContext) => TestRender01(glContext));
   //runRenderOnCanvas(canvas, (glContext) => TestRender02(glContext));
-  runRenderOnCanvas(canvas, (glContext) => TestRender03(glContext));
+  runRenderOnCanvas(canvas, (glContext) => TestScene_03_Delegate(glContext));
 }
 
 void runRenderOnCanvas(
   html.CanvasElement canvas,
-  RenderDelegate Function(gl.RenderingContext) renderFactory) {
+  SceneDelegate Function(gl.RenderingContext) sceneFactory) {
   final glContext = canvas.getContext3d();
-  final delegate = renderFactory(glContext);
+  final delegate = sceneFactory(glContext);
 
   void resize() {
     final cssPixelsWidth = canvas.clientWidth;

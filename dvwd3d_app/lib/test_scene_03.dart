@@ -9,12 +9,12 @@ import 'render_program.dart';
 import 'render_root.dart';
 import 'render_scene.dart';
 
-class TestRender03 implements RenderDelegate {
+class TestScene_03_Delegate implements SceneDelegate {
   final gl.RenderingContext _glContext;
 
   late final TestScene03 _scene;
 
-  TestRender03(this._glContext) {
+  TestScene_03_Delegate(this._glContext) {
     _scene = TestScene03(_glContext);
   }
 
@@ -26,12 +26,6 @@ class TestRender03 implements RenderDelegate {
 
   @override
   void render() {
-    _glContext.enable(gl.WebGL.CULL_FACE);
-    _glContext.cullFace(gl.WebGL.BACK);
-    _glContext.frontFace(gl.WebGL.CCW);
-    _glContext.enable(gl.WebGL.DEPTH_TEST);
-    _glContext.clearColor(0.1, 0.1, 0.1, 1.0);
-    _glContext.clear(gl.WebGL.COLOR_BUFFER_BIT | gl.WebGL.DEPTH_BUFFER_BIT);
     _scene.draw();
   }
 
@@ -288,6 +282,13 @@ class TestScene03 {
   }
 
   void draw() {
+    _glContext.enable(gl.WebGL.CULL_FACE);
+    _glContext.cullFace(gl.WebGL.BACK);
+    _glContext.frontFace(gl.WebGL.CCW);
+    _glContext.enable(gl.WebGL.DEPTH_TEST);
+    _glContext.clearColor(0.1, 0.1, 0.1, 1.0);
+    _glContext.clear(gl.WebGL.COLOR_BUFFER_BIT | gl.WebGL.DEPTH_BUFFER_BIT);
+
     _program._viewProjectionMatrix.data = Matrix4UniformData(
       _camera.viewProjectionMatrix);
     _program._lightsBinding.data = _lights;

@@ -5,12 +5,12 @@ import 'package:dvwd3d_app/render_root.dart';
 
 import 'render_program.dart';
 
-class TestRender01 implements RenderDelegate {
+class TestScene_01_Delegate implements SceneDelegate {
   final gl.RenderingContext _glContext;
 
   late final TestScene_01 _scene;
 
-  TestRender01(this._glContext) {
+  TestScene_01_Delegate(this._glContext) {
     _scene = TestScene_01(_glContext);
   }
 

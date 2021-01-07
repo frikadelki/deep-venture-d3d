@@ -9,12 +9,12 @@ import 'render_program.dart';
 import 'render_root.dart';
 import 'render_scene.dart';
 
-class TestRender02 implements RenderDelegate {
+class TestScene_02_Delegate implements SceneDelegate {
   final gl.RenderingContext _glContext;
 
   late final TestScene_02 _scene;
 
-  TestRender02(this._glContext) {
+  TestScene_02_Delegate(this._glContext) {
     _scene = TestScene_02(_glContext);
   }
 
