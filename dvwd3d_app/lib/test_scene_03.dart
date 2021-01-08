@@ -144,11 +144,13 @@ class TestScene03 {
 
   final gl.RenderingContext _glContext;
 
-  final List<DisposableBuffers> _buffers;
+  final Assets _assets;
 
   final TestProgram_03 _program;
 
-  final List<RenderObject> _objects;
+  final TestGrid01 _testGrid01;
+
+  final Grid _grid;
 
   final LightsData _lights;
 
@@ -156,14 +158,15 @@ class TestScene03 {
 
   TestScene03._(
     this._glContext,
-    this._buffers,
+    this._assets,
     this._program,
-    this._objects,
+    this._testGrid01,
+    this._grid,
     this._lights,
     this._camera);
 
   factory TestScene03(gl.RenderingContext glContext) {
-    final disposableBuffers = <DisposableBuffers>[];
+    final assets = Assets(glContext);
 
     late final TestProgram_03 program;
     try {
@@ -173,29 +176,153 @@ class TestScene03 {
       rethrow;
     }
 
-    final cubeMeshData = CubeMeshData(glContext);
-    disposableBuffers.add(cubeMeshData);
-
     final cellSize = 1.0;
     final avatarHeight = 1.5;
 
-    final grid = GridGeometry(cellSize);
+    final gridGeometry = GridGeometry(cellSize);
+
+    final testGrid = TestGrid01(gridGeometry, assets);
+
+    final grid = Grid(gridGeometry);
+    grid.importLayer(_Floor, -1);
+    grid.importLayer(_Walls1, 0);
 
     final avatarEye = Vector3.zero();
-    grid.calcTranslationVector(
-      avatarEye, GridCoordinate(0, 0, 0), grid.cellSize);
-    avatarEye.z += 3.0 * grid.cellSize;
-    avatarEye.y += avatarHeight + grid.cellSize / 2.0;
+    gridGeometry.calcTranslationVector(
+      avatarEye, GridCoordinate(3, 0, 0), gridGeometry.cellSize);
+    //avatarEye.x += gridGeometry.cellSize / 2.0;
+    avatarEye.z += 3.0 * gridGeometry.cellSize;
+    avatarEye.y += avatarHeight + gridGeometry.cellSize / 2.0;
 
-    final objects = <RenderObject>[];
+    final lights = LightsData();
+    lights.ambientColor.setValues(0.2, 0.2, 0.2);
+    /*lights.directLights.add(DirectLight()
+      ..direction.setValues(0.0, 1.0, 0.0)
+      ..color.setValues(0.3, 0.3, 0.3));*/
+    lights.pointLights.add(PointLight()
+      ..origin.setValues(
+        avatarEye.x,
+        avatarEye.y,
+        avatarEye.z - 0.5)
+      ..color.setValues(0.6, 0.3, 0.5));
 
-    Cube addCube(GridCoordinate coordinate) {
-      final cube = Cube(cubeMeshData);
-      grid.calcTranslationMatrix(cube.transform.modelMatrix, coordinate, 1.0);
-      objects.add(cube);
-      return cube;
+    final camera = Camera();
+    camera.setLookAt(
+      avatarEye,
+      Vector3.zero()..setValues(
+        avatarEye.x,
+        avatarEye.y,
+        0.0),
+      Vector3.zero()..setValues(0.0, 1.0, 0.0));
+
+    return TestScene03._(
+      glContext,
+      assets,
+      program,
+      testGrid,
+      grid,
+      lights,
+      camera);
+  }
+
+  void resize(int width, int height) {
+    final aspectRatio = width / height;
+    _camera.setPerspective(FovYRadians, aspectRatio, ZNear, ZFar);
+  }
+
+  void draw() {
+    _glContext.enable(gl.WebGL.CULL_FACE);
+    _glContext.cullFace(gl.WebGL.BACK);
+    _glContext.frontFace(gl.WebGL.CCW);
+    _glContext.enable(gl.WebGL.DEPTH_TEST);
+    _glContext.clearColor(0.1, 0.1, 0.1, 1.0);
+    _glContext.clear(gl.WebGL.COLOR_BUFFER_BIT | gl.WebGL.DEPTH_BUFFER_BIT);
+
+    _program._viewProjectionMatrix.data = Matrix4UniformData(
+      _camera.viewProjectionMatrix);
+    _program._lightsBinding.data = _lights;
+    _program._cameraEyePosition.data = Vector3UniformData(_camera.eyePosition);
+    /*for (final object in _testGrid01.objects) {
+      _drawObject(object);
+    }*/
+    for (final matrix in _grid._modelMatrices) {
+      _drawObjectM(matrix);
     }
+  }
 
+  void _drawObject(RenderObject object) {
+    _program._modelMatrix.data = object.modelMatrixData;
+    _program._normalsMatrix.data = object.normalsMatrixData;
+    _program._position.data = object.meshData.positionsData;
+    _program._normal.data = object.meshData.normalsData;
+    _program._modelColorDiffuse.data = Vector3UniformData(
+      Vector3(0.2, 0.8, 0.5));
+    _program._modelColorSpecular.data = Vector4UniformData(
+      Vector4(0.0, 0.2, 0.0, 0.25));
+    _program._indicesArray.data = object.meshData.indices;
+    _program._program.draw();
+  }
+
+  void _drawObjectM(Matrix4 modelMatrix) {
+    _program._modelMatrix.data = Matrix4UniformData(modelMatrix);
+    _program._normalsMatrix.data = Matrix4UniformData(Matrix4.identity());
+    final meshData = _assets.cubeMeshData;
+    _program._position.data = meshData.positionsData;
+    _program._normal.data = meshData.normalsData;
+    _program._modelColorDiffuse.data = Vector3UniformData(
+      Vector3(0.2, 0.8, 0.5));
+    _program._modelColorSpecular.data = Vector4UniformData(
+      Vector4(0.0, 0.2, 0.0, 0.25));
+    _program._indicesArray.data = meshData.indices;
+    _program._program.draw();
+  }
+
+  void dispose() {
+    _program._program.dispose();
+    _assets.dispose();
+  }
+}
+
+class Assets {
+  final gl.RenderingContext _glContext;
+
+  final _buffers = <DisposableBuffers>[];
+  
+  late final CubeMeshData cubeMeshData;
+  
+  Assets(this._glContext) {
+    cubeMeshData = CubeMeshData(_glContext);
+    _buffers.add(cubeMeshData);
+  }
+  
+  void dispose() {
+    for (final disposable in _buffers) {
+      disposable.disposeBuffers(_glContext);
+    }
+    _buffers.clear();
+  }
+}
+
+class TestGrid01 {
+  final GridGeometry gridGeometry;
+  
+  final Assets assets;
+  
+  final objects = <RenderObject>[];
+
+  TestGrid01(this.gridGeometry, this.assets) {
+    init();
+  }
+
+  Cube addCube(GridCoordinate coordinate) {
+    final cube = Cube(assets.cubeMeshData);
+    gridGeometry.calcTranslationMatrix(
+      cube.transform.modelMatrix, coordinate, 1.0);
+    objects.add(cube);
+    return cube;
+  }
+  
+  void init() {
     // floor
 
     addCube(GridCoordinate(0, 0, 0));
@@ -245,78 +372,52 @@ class TestScene03 {
     addCube(GridCoordinate(0, 1, 3));
 
     addCube(GridCoordinate(0, 2, 3));
-
-    final lights = LightsData();
-    lights.ambientColor.setValues(0.2, 0.2, 0.2);
-    /*lights.directLights.add(DirectLight()
-      ..direction.setValues(0.0, 1.0, 0.0)
-      ..color.setValues(0.3, 0.3, 0.3));*/
-    lights.pointLights.add(PointLight()
-      ..origin.setValues(
-        avatarEye.x,
-        avatarEye.y,
-        avatarEye.z - 0.5)
-      ..color.setValues(0.6, 0.3, 0.5));
-
-    final camera = Camera();
-    camera.setLookAt(
-      avatarEye,
-      Vector3.zero()..setValues(
-        avatarEye.x,
-        avatarEye.y,
-        0.0),
-      Vector3.zero()..setValues(0.0, 1.0, 0.0));
-
-    return TestScene03._(
-      glContext,
-      disposableBuffers,
-      program,
-      objects,
-      lights,
-      camera);
   }
+}
 
-  void resize(int width, int height) {
-    final aspectRatio = width / height;
-    _camera.setPerspective(FovYRadians, aspectRatio, ZNear, ZFar);
-  }
+final _Floor = [
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+];
 
-  void draw() {
-    _glContext.enable(gl.WebGL.CULL_FACE);
-    _glContext.cullFace(gl.WebGL.BACK);
-    _glContext.frontFace(gl.WebGL.CCW);
-    _glContext.enable(gl.WebGL.DEPTH_TEST);
-    _glContext.clearColor(0.1, 0.1, 0.1, 1.0);
-    _glContext.clear(gl.WebGL.COLOR_BUFFER_BIT | gl.WebGL.DEPTH_BUFFER_BIT);
+final _Walls1 = [
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 0, 0, 0, 1, 0, 1, ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 1, ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 1, ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 1, ],
+  <int>[ 1, 1, 0, 0, 0, 1, 0, 1, ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+];
 
-    _program._viewProjectionMatrix.data = Matrix4UniformData(
-      _camera.viewProjectionMatrix);
-    _program._lightsBinding.data = _lights;
-    _program._cameraEyePosition.data = Vector3UniformData(_camera.eyePosition);
-    for (final object in _objects) {
-      _drawObject(object);
+class Grid {
+  final GridGeometry _geometry;
+
+  final _modelMatrices = <Matrix4>[];
+
+  Grid(this._geometry);
+
+  void importLayer(List<List<int>> data, int y) {
+    for (var row = 0; row < data.length; row++) {
+      final rowData = data[row];
+      for (var column = 0; column < rowData.length; column++) {
+        final value = rowData[column];
+        if (value <= 0) {
+          continue;
+        }
+        final coordinate = GridCoordinate(row, -column, y);
+        final matrix = Matrix4.identity();
+        _geometry.calcTranslationMatrix(matrix, coordinate, _geometry.cellSize);
+        _modelMatrices.add(matrix);
+      }
     }
-  }
-
-  void _drawObject(RenderObject object) {
-    _program._modelMatrix.data = object.modelMatrixData;
-    _program._normalsMatrix.data = object.normalsMatrixData;
-    _program._position.data = object.meshData.positionsData;
-    _program._normal.data = object.meshData.normalsData;
-    _program._modelColorDiffuse.data = Vector3UniformData(
-      Vector3(0.2, 0.8, 0.5));
-    _program._modelColorSpecular.data = Vector4UniformData(
-      Vector4(0.0, 0.2, 0.0, 0.25));
-    _program._indicesArray.data = object.meshData.indices;
-    _program._program.draw();
-  }
-
-  void dispose() {
-    _program._program.dispose();
-    for (final disposable in _buffers) {
-      disposable.disposeBuffers(_glContext);
-    }
-    _buffers.clear();
   }
 }
 
