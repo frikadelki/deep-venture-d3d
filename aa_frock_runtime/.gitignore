@@ -1,0 +1,16 @@
+lib/algorithms.dart
+test/algorithms_test.dart
+
+# Files and directories created by pub
+.dart_tool/
+.packages
+
+# Conventional directory for build outputs
+build/
+
+# Directory created by dartdoc
+doc/api/
+
+# IDEs
+.idea/
+*.iml
