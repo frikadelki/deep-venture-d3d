@@ -19,14 +19,18 @@ class TestScene_03_Delegate implements SceneDelegate {
   }
 
   @override
-  void resize(int width, int height) {
-    _glContext.viewport(0, 0, width, height);
-    _scene.resize(width, height);
+  void onKeyDown(SceneKeyCode code) {
   }
 
   @override
   void render() {
     _scene.draw();
+  }
+
+  @override
+  void resize(int width, int height) {
+    _glContext.viewport(0, 0, width, height);
+    _scene.resize(width, height);
   }
 
   @override
@@ -133,7 +137,23 @@ class TestProgram_03  {
   }
 }
 
-class TestScene03 {
+class _C {
+  static final ClearColor = Vector4(0.1, 0.1, 0.1, 1.0);
+
+  static final AmbientColor = Vector3(0.16, 0.16, 0.16);
+
+  static final AvatarStart = GridCoordinate(3, 1, 0);
+
+  static final AvatarHeight = 1.5;
+  
+  static final AvatarLanternColor = Vector3(0.5, 0.4, 0.1);
+
+  static final CubeDiffuseColor = Vector3(0.2, 0.7, 0.3);
+
+  static final CubeSpecularColor = Vector4(0.2, 0.7, 0.2, 0.25);
+
+  static final GridCellSize = 1.0;
+
   static final ZNear = 0.001;
 
   static final ZFar = 10.0;
@@ -141,93 +161,53 @@ class TestScene03 {
   static final FovYDegrees = 75.0;
 
   static final FovYRadians = math.pi * FovYDegrees / 180.0;
+}
 
+class TestScene03 {
   final gl.RenderingContext _glContext;
 
-  final Assets _assets;
+  late final Assets _assets;
 
-  final TestProgram_03 _program;
+  late final TestProgram_03 _program;
 
-  final TestGrid01 _testGrid01;
+  late final Grid _grid;
 
-  final Grid _grid;
+  late final Avatar _avatar;
 
-  final LightsData _lights;
+  final _lights = LightsData();
 
-  final Camera _camera;
-
-  TestScene03._(
-    this._glContext,
-    this._assets,
-    this._program,
-    this._testGrid01,
-    this._grid,
-    this._lights,
-    this._camera);
+  final _camera = Camera();
 
   factory TestScene03(gl.RenderingContext glContext) {
-    final assets = Assets(glContext);
-
-    late final TestProgram_03 program;
     try {
-      program = TestProgram_03._(glContext);
+      return TestScene03._(glContext);
     } on ProgramException catch (e) {
-      print('${e.reason}\n${e.infoLog}');
+      print('Exception while loading test scene 3:\n${e.reason}\n${e.infoLog}');
       rethrow;
     }
-
-    final cellSize = 1.0;
-    final avatarHeight = 1.5;
-
-    final gridGeometry = GridGeometry(cellSize);
-
-    final testGrid = TestGrid01(gridGeometry, assets);
-
-    final grid = Grid(gridGeometry);
-    grid.importLayer(_Floor, -1);
-    grid.importLayer(_Walls1, 0);
-
-    final avatarEye = Vector3.zero();
-    gridGeometry.calcTranslationVector(
-      avatarEye, GridCoordinate(3, 0, 0), gridGeometry.cellSize);
-    //avatarEye.x += gridGeometry.cellSize / 2.0;
-    avatarEye.z += 3.0 * gridGeometry.cellSize;
-    avatarEye.y += avatarHeight + gridGeometry.cellSize / 2.0;
-
-    final lights = LightsData();
-    lights.ambientColor.setValues(0.2, 0.2, 0.2);
-    /*lights.directLights.add(DirectLight()
-      ..direction.setValues(0.0, 1.0, 0.0)
-      ..color.setValues(0.3, 0.3, 0.3));*/
-    lights.pointLights.add(PointLight()
-      ..origin.setValues(
-        avatarEye.x,
-        avatarEye.y,
-        avatarEye.z - 0.5)
-      ..color.setValues(0.6, 0.3, 0.5));
-
-    final camera = Camera();
-    camera.setLookAt(
-      avatarEye,
-      Vector3.zero()..setValues(
-        avatarEye.x,
-        avatarEye.y,
-        0.0),
-      Vector3.zero()..setValues(0.0, 1.0, 0.0));
-
-    return TestScene03._(
-      glContext,
-      assets,
-      program,
-      testGrid,
-      grid,
-      lights,
-      camera);
   }
 
-  void resize(int width, int height) {
-    final aspectRatio = width / height;
-    _camera.setPerspective(FovYRadians, aspectRatio, ZNear, ZFar);
+  TestScene03._(this._glContext) {
+    _assets = Assets(_glContext);
+    _program = TestProgram_03._(_glContext);
+
+    final gridGeometry = GridGeometry(_C.GridCellSize);
+
+    _grid = Grid(gridGeometry);
+    _grid.importLayer(_GridFloor, -1);
+    _grid.importLayer(_GridWalls1, 0);
+    _grid.importLayer(_GridWalls2, 1);
+
+    _avatar = Avatar(gridGeometry);
+
+    _lights.ambientColor.setFrom(_C.AmbientColor);
+    _lights.pointLights.add(_avatar.lantern);
+
+    _updateFromAvatar();
+  }
+
+  void _updateFromAvatar() {
+    _camera.setLookAt(_avatar.eye, _avatar.lookAt, _avatar.up);
   }
 
   void draw() {
@@ -235,7 +215,7 @@ class TestScene03 {
     _glContext.cullFace(gl.WebGL.BACK);
     _glContext.frontFace(gl.WebGL.CCW);
     _glContext.enable(gl.WebGL.DEPTH_TEST);
-    _glContext.clearColor(0.1, 0.1, 0.1, 1.0);
+    _glContext.clearColorFrom(_C.ClearColor);
     _glContext.clear(gl.WebGL.COLOR_BUFFER_BIT | gl.WebGL.DEPTH_BUFFER_BIT);
 
     _program._viewProjectionMatrix.data = Matrix4UniformData(
@@ -255,10 +235,8 @@ class TestScene03 {
     _program._normalsMatrix.data = object.normalsMatrixData;
     _program._position.data = object.meshData.positionsData;
     _program._normal.data = object.meshData.normalsData;
-    _program._modelColorDiffuse.data = Vector3UniformData(
-      Vector3(0.2, 0.8, 0.5));
-    _program._modelColorSpecular.data = Vector4UniformData(
-      Vector4(0.0, 0.2, 0.0, 0.25));
+    _program._modelColorDiffuse.data = Vector3UniformData(_C.CubeDiffuseColor);
+    _program._modelColorSpecular.data = Vector4UniformData(_C.CubeSpecularColor);
     _program._indicesArray.data = object.meshData.indices;
     _program._program.draw();
   }
@@ -269,12 +247,15 @@ class TestScene03 {
     final meshData = _assets.cubeMeshData;
     _program._position.data = meshData.positionsData;
     _program._normal.data = meshData.normalsData;
-    _program._modelColorDiffuse.data = Vector3UniformData(
-      Vector3(0.2, 0.8, 0.5));
-    _program._modelColorSpecular.data = Vector4UniformData(
-      Vector4(0.0, 0.2, 0.0, 0.25));
+    _program._modelColorDiffuse.data = Vector3UniformData(_C.CubeDiffuseColor);
+    _program._modelColorSpecular.data = Vector4UniformData(_C.CubeSpecularColor);
     _program._indicesArray.data = meshData.indices;
     _program._program.draw();
+  }
+
+  void resize(int width, int height) {
+    final aspectRatio = width / height;
+    _camera.setPerspective(_C.FovYRadians, aspectRatio, _C.ZNear, _C.ZFar);
   }
 
   void dispose() {
@@ -303,79 +284,57 @@ class Assets {
   }
 }
 
-class TestGrid01 {
-  final GridGeometry gridGeometry;
-  
-  final Assets assets;
-  
-  final objects = <RenderObject>[];
+class Avatar {
+  final GridGeometry _gridGeometry;
 
-  TestGrid01(this.gridGeometry, this.assets) {
-    init();
+  final eye = Vector3.zero();
+
+  final direction = Vector3.zero();
+
+  final up = Vector3(0.0, 1.0, 0.0);
+
+  final lookAt = Vector3.zero();
+
+  final lantern = PointLight();
+
+  Avatar(this._gridGeometry) {
+    lantern.color.setFrom(_C.AvatarLanternColor);
+    reset();
   }
 
-  Cube addCube(GridCoordinate coordinate) {
-    final cube = Cube(assets.cubeMeshData);
-    gridGeometry.calcTranslationMatrix(
-      cube.transform.modelMatrix, coordinate, 1.0);
-    objects.add(cube);
-    return cube;
+  void reset() {
+    _gridGeometry.calcTranslationVector(
+      eye, _C.AvatarStart, _gridGeometry.cellSize);
+    eye.y += _C.AvatarHeight - _gridGeometry.cellSize / 2.0;
+
+    direction.setValues(0.0, 0.0, -1.0);
+    direction.normalize();
+
+    _updateLookAt();
+    _updateLantern();
   }
-  
-  void init() {
-    // floor
 
-    addCube(GridCoordinate(0, 0, 0));
+  void _updateLookAt() {
+    lookAt.setValues(
+      eye.x + direction.x,
+      eye.y + direction.y,
+      eye.z + direction.z);
+  }
 
-    addCube(GridCoordinate(1, 0, 0));
-
-    addCube(GridCoordinate(-1, 0, 0));
-
-    addCube(GridCoordinate(0, -1, 0));
-
-    addCube(GridCoordinate(1, -1, 0));
-
-    addCube(GridCoordinate(-1, -1, 0));
-
-    addCube(GridCoordinate(0, 1, 0));
-
-    addCube(GridCoordinate(1, 1, 0));
-
-    addCube(GridCoordinate(-1, 1, 0));
-
-    // right wall
-
-    addCube(GridCoordinate(1, 0, 1));
-
-    addCube(GridCoordinate(1, 0, 2));
-
-    addCube(GridCoordinate(1, 1, 1));
-
-    addCube(GridCoordinate(1, 2, 1));
-
-    addCube(GridCoordinate(1, 2, 2));
-
-    addCube(GridCoordinate(1, 1, 3));
-
-    // left wall
-
-    addCube(GridCoordinate(-1, 0, 1));
-
-    addCube(GridCoordinate(-1, 1, 2));
-
-    addCube(GridCoordinate(-1, 2, 2));
-
-    // ceiling
-
-    addCube(GridCoordinate(0, 0, 3));
-
-    addCube(GridCoordinate(0, 1, 3));
-
-    addCube(GridCoordinate(0, 2, 3));
+  void _updateLantern() {
+    final tmp = Vector3.zero()
+      ..setFrom(up)
+      ..normalize()
+      ..scale(-0.3);
+    lantern.origin
+      ..setFrom(direction)
+      ..scale(0.2)
+      ..add(eye)
+      ..add(tmp);
   }
 }
 
-final _Floor = [
+final _GridFloor = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
@@ -386,15 +345,26 @@ final _Floor = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
 ];
 
-final _Walls1 = [
+final _GridWalls1 = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 0, 0, 0, 1, 0, 1, ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 1, ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 1, ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 1, ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 1, ],
+  <int>[ 1, 1, 1, 0, 0, 0, 0, 1, ],
   <int>[ 1, 1, 0, 0, 0, 1, 0, 1, ],
   <int>[ 1, 1, 0, 0, 0, 0, 0, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+];
+
+final _GridWalls2 = [
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
+  <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
+  <int>[ 1, 0, 0, 0, 0, 1, 0, 0, ],
+  <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
 ];
 
 class Grid {

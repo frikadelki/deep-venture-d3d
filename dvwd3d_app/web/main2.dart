@@ -42,4 +42,28 @@ void runRenderOnCanvas(
     html.window.animationFrame.then(onAnimationFrame);
   }
   html.window.animationFrame.then(onAnimationFrame);
+
+  html.window.onKeyDown.forEach((event) {
+    final decodedCode = _decodeKeyCode(event);
+    if (decodedCode != null) {
+      delegate.onKeyDown(decodedCode);
+    }
+  });
+}
+
+SceneKeyCode? _decodeKeyCode(html.KeyboardEvent event) {
+  switch(event.code) {
+    case 'KeyW':
+      return SceneKeyCode.W;
+
+    case 'KeyA':
+      return SceneKeyCode.A;
+
+    case 'KeyS':
+      return SceneKeyCode.S;
+
+    case 'KeyD':
+      return SceneKeyCode.D;
+  }
+  return null;
 }

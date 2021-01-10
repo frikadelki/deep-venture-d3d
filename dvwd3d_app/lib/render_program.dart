@@ -447,7 +447,7 @@ class _ProgramStats {
   _ProgramStats(this.linked, this.infoLog);
 }
 
-extension on gl.RenderingContext {
+extension GlRenderingContextUtils on gl.RenderingContext {
   _ShaderStats _getShaderStats(gl.Shader shader) {
     final compiled = getShaderParameter(shader, gl.WebGL.COMPILE_STATUS);
     final infoLogContent = getShaderInfoLog(shader);
@@ -472,5 +472,9 @@ extension on gl.RenderingContext {
     final linked = getProgramParameter(program, gl.WebGL.LINK_STATUS);
     final infoLogContent = getProgramInfoLog(program);
     return _ProgramStats(linked as bool, _InfoLog(infoLogContent));
+  }
+
+  void clearColorFrom(Vector4 color) {
+    clearColor(color.r, color.g, color.b, color.a);
   }
 }

@@ -27,6 +27,10 @@ class TestScene_01_Delegate implements SceneDelegate {
   }
 
   @override
+  void onKeyDown(SceneKeyCode code) {
+  }
+
+  @override
   void dispose() {
     _scene.dispose();
   }
