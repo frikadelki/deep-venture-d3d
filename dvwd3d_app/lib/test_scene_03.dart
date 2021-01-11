@@ -220,7 +220,10 @@ class TestScene03 {
     if (SceneKeyCode.R == code) {
       _avatar.reset();
     } else {
-      _avatar.moveFw();
+      final relative = GridRelativeDirectionExt.fromKeyCode(code);
+      if (null != relative) {
+        _avatar.move(relative);
+      }
     }
   }
 
@@ -318,15 +321,16 @@ class Avatar {
     lantern.color.setFrom(_C.AvatarLanternColor);
     reset();
   }
-  
-  void moveFw() {
-    final old = _coordinate.value;
-    final coordinate = old.add(_direction.value.gridVector);
-    _updateGridCoordinate(coordinate);
-  }
 
   void reset() {
     _updateGridCoordinate(_C.AvatarStart);
+  }
+
+  void move(GridRelativeDirection relative) {
+    final old = _coordinate.value;
+    final absolute = _direction.value.relative(relative);
+    final coordinate = old.add(absolute.gridVector);
+    _updateGridCoordinate(coordinate);
   }
 
   void _updateGridCoordinate(GridVector coordinate) {
@@ -420,26 +424,45 @@ class GridAbsoluteDirectionMeta {
   final GridVector gridVector;
   
   final Vector3 worldVector;
+  
+  final GridAbsoluteDirection opposite;
 
-  GridAbsoluteDirectionMeta(this.gridVector, this.worldVector);
+  final GridAbsoluteDirection right;
+
+  final GridAbsoluteDirection left;
+
+  GridAbsoluteDirectionMeta(
+    this.gridVector, this.worldVector, this.opposite, this.right, this.left);
 }
 
 extension on GridAbsoluteDirection {
   static final _NorthMeta = GridAbsoluteDirectionMeta(
     GridVector(0, -1, 0), 
-    Vector3(0.0, 0.0, -1.0));
+    Vector3(0.0, 0.0, -1.0),
+    GridAbsoluteDirection.South,
+    GridAbsoluteDirection.East,
+    GridAbsoluteDirection.West);
 
   static final _EastMeta = GridAbsoluteDirectionMeta(
     GridVector(1, 0, 0),
-    Vector3(1.0, 0.0, 0.0));
+    Vector3(1.0, 0.0, 0.0),
+    GridAbsoluteDirection.West,
+    GridAbsoluteDirection.South,
+    GridAbsoluteDirection.North);
 
   static final _SouthMeta = GridAbsoluteDirectionMeta(
     GridVector(0, 1, 0),
-    Vector3(0.0, 0.0, 1.0));
+    Vector3(0.0, 0.0, 1.0),
+    GridAbsoluteDirection.North,
+    GridAbsoluteDirection.West,
+    GridAbsoluteDirection.East);
 
   static final _WestMeta = GridAbsoluteDirectionMeta(
     GridVector(-1, 0, 0),
-    Vector3(-1.0, 0.0, 0.0));
+    Vector3(-1.0, 0.0, 0.0),
+    GridAbsoluteDirection.East,
+    GridAbsoluteDirection.North,
+    GridAbsoluteDirection.South);
 
   GridAbsoluteDirectionMeta get meta {
     switch (this) {
@@ -464,6 +487,22 @@ extension on GridAbsoluteDirection {
   Vector3 get worldVector {
     return meta.worldVector;
   }
+
+  GridAbsoluteDirection relative(GridRelativeDirection relation) {
+    switch (relation) {
+      case GridRelativeDirection.Forward:
+        return this;
+        
+      case GridRelativeDirection.Right:
+        return meta.right;
+        
+      case GridRelativeDirection.Backward:
+        return meta.opposite;
+        
+      case GridRelativeDirection.Left:
+        return meta.left;
+    }
+  }
 }
 
 enum GridRelativeDirection {
@@ -473,8 +512,8 @@ enum GridRelativeDirection {
   Left,
 }
 
-extension on GridRelativeDirection {
-  GridRelativeDirection? fromKeyCode(SceneKeyCode code) {
+extension GridRelativeDirectionExt on GridRelativeDirection {
+  static GridRelativeDirection? fromKeyCode(SceneKeyCode code) {
     switch (code) {
       case SceneKeyCode.W:
         return GridRelativeDirection.Forward;
