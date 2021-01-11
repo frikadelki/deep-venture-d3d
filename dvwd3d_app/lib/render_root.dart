@@ -4,6 +4,8 @@ enum SceneKeyCode {
   A,
   S,
   D,
+  Q,
+  E,
   R,
 }
 

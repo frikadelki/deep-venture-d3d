@@ -144,7 +144,9 @@ class _C {
 
   static final AmbientColor = Vector3(0.16, 0.16, 0.16);
 
-  static final AvatarStart = GridVector(3, 3, 0);
+  static final AvatarStartCoordinate = GridVector(3, 3, 0);
+
+  static final AvatarStartDirection = GridAbsoluteDirection.North;
 
   static final AvatarHeight = 1.5;
   
@@ -207,9 +209,10 @@ class TestScene03 {
     _lights.ambientColor.setFrom(_C.AmbientColor);
     _lights.pointLights.add(_avatar.lantern);
 
-    _avatar._coordinate.observe(_lifetime, (_) {
+    _avatar.onWorldUpdate.observe(_lifetime, (_) {
       _updateFromAvatar();
     });
+    _updateFromAvatar();
   }
 
   void _updateFromAvatar() {
@@ -217,13 +220,34 @@ class TestScene03 {
   }
 
   void handleAction(SceneKeyCode code) {
-    if (SceneKeyCode.R == code) {
-      _avatar.reset();
-    } else {
-      final relative = GridRelativeDirectionExt.fromKeyCode(code);
-      if (null != relative) {
-        _avatar.move(relative);
-      }
+    switch (code) {
+      case SceneKeyCode.W:
+        _avatar.move(GridRelativeDirection.Forward);
+        break;
+
+      case SceneKeyCode.A:
+        _avatar.move(GridRelativeDirection.Left);
+        break;
+
+      case SceneKeyCode.S:
+        _avatar.move(GridRelativeDirection.Backward);
+        break;
+
+      case SceneKeyCode.D:
+        _avatar.move(GridRelativeDirection.Right);
+        break;
+
+      case SceneKeyCode.Q:
+        _avatar.rotate(GridRotation.Left);
+        break;
+
+      case SceneKeyCode.E:
+        _avatar.rotate(GridRotation.Right);
+        break;
+
+      case SceneKeyCode.R:
+        _avatar.reset();
+        break;
     }
   }
 
@@ -308,6 +332,8 @@ class Avatar {
 
   final _direction = ValueProperty(GridAbsoluteDirection.North);
 
+  Source<void> get onWorldUpdate => [ _coordinate, _direction ].merge();
+
   final eye = Vector3.zero();
 
   final up = Vector3(0.0, 1.0, 0.0);
@@ -323,36 +349,45 @@ class Avatar {
   }
 
   void reset() {
-    _updateGridCoordinate(_C.AvatarStart);
+    final newCoordinate = _C.AvatarStartCoordinate;
+    final newDirection = _C.AvatarStartDirection;
+    _updateWorld(newCoordinate, newDirection);
+    _coordinate.value = newCoordinate;
+    _direction.value = newDirection;
   }
 
-  void move(GridRelativeDirection relative) {
-    final old = _coordinate.value;
-    final absolute = _direction.value.relative(relative);
-    final coordinate = old.add(absolute.gridVector);
-    _updateGridCoordinate(coordinate);
+  void move(GridRelativeDirection relativeDirection) {
+    final oldCoordinate = _coordinate.value;
+    final absoluteDirection = _direction.value.relative(relativeDirection);
+    final newCoordinate = oldCoordinate.add(absoluteDirection.gridVector);
+    _updateWorld(newCoordinate, _direction.value);
+    _coordinate.value = newCoordinate;
   }
 
-  void _updateGridCoordinate(GridVector coordinate) {
+  void rotate(GridRotation rotation) {
+    final newDirection = _direction.value.rotate(rotation);
+    _updateWorld(_coordinate.value, newDirection);
+    _direction.value = newDirection;
+  }
+
+  void _updateWorld(GridVector coordinate, GridAbsoluteDirection direction) {
     _gridGeometry.calcTranslationVector(
       eye, coordinate, _gridGeometry.cellSize);
     eye.y += _C.AvatarHeight - _gridGeometry.cellSize / 2.0;
 
     lookAt.setFrom(eye);
-    lookAt.add(_direction.value.worldVector);
+    lookAt.add(direction.worldVector);
 
     final tmp = Vector3.zero()
       ..setFrom(up)
       ..normalize()
       ..scale(-0.3);
     lantern.origin
-      ..setFrom(_direction.value.worldVector)
+      ..setFrom(direction.worldVector)
       ..normalize()
       ..scale(0.2)
       ..add(eye)
       ..add(tmp);
-
-    _coordinate.value = coordinate;
   }
 }
 
@@ -411,6 +446,11 @@ class Grid {
       }
     }
   }
+}
+
+enum GridRotation {
+  Right,
+  Left,
 }
 
 enum GridAbsoluteDirection {
@@ -503,6 +543,16 @@ extension on GridAbsoluteDirection {
         return meta.left;
     }
   }
+
+  GridAbsoluteDirection rotate(GridRotation rotation) {
+    switch (rotation) {
+      case GridRotation.Right:
+        return meta.right;
+
+      case GridRotation.Left:
+        return meta.left;
+    }
+  }
 }
 
 enum GridRelativeDirection {
@@ -510,27 +560,6 @@ enum GridRelativeDirection {
   Right,
   Backward,
   Left,
-}
-
-extension GridRelativeDirectionExt on GridRelativeDirection {
-  static GridRelativeDirection? fromKeyCode(SceneKeyCode code) {
-    switch (code) {
-      case SceneKeyCode.W:
-        return GridRelativeDirection.Forward;
-
-      case SceneKeyCode.A:
-        return GridRelativeDirection.Left;
-
-      case SceneKeyCode.S:
-        return GridRelativeDirection.Backward;
-
-      case SceneKeyCode.D:
-        return GridRelativeDirection.Right;
-
-      default:
-        return null;
-    }
-  }
 }
 
 class GridVector {

@@ -59,6 +59,12 @@ SceneKeyCode? _decodeKeyCode(html.KeyboardEvent event) {
     case 'KeyD':
       return SceneKeyCode.D;
 
+    case 'KeyE':
+      return SceneKeyCode.E;
+
+    case 'KeyQ':
+      return SceneKeyCode.Q;
+
     case 'KeyR':
       return SceneKeyCode.R;
 
