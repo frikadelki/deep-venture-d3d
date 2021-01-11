@@ -15,6 +15,9 @@ class CubeMeshData implements MeshData, DisposableBuffers {
   @override
   final VertexAttributeData normalsData;
 
+  @override
+  final VertexAttributeData texCoordData;
+
   final gl.Buffer _indicesGlBuffer;
 
   @override
@@ -24,26 +27,33 @@ class CubeMeshData implements MeshData, DisposableBuffers {
     this._attributesGlBuffer,
     this.positionsData,
     this.normalsData,
+    this.texCoordData,
     this._indicesGlBuffer,
     this.indices);
 
   factory CubeMeshData(gl.RenderingContext glContext) {
     final cubeGenerator = CubeGenerator();
     final cubeFlags = GeometryGeneratorFlags(
-      texCoords: false, normals: true, tangents: false);
+      texCoords: true, normals: true, tangents: false);
     final mesh = cubeGenerator.createCube(0.5, 0.5, 0.5, flags: cubeFlags);
 
     final attributesBuffer = glContext.createBuffer();
     mesh.bindAttributesData(glContext, attributesBuffer);
     final positionsData = mesh.extractPositions(attributesBuffer);
     final normalsData = mesh.extractNormals(attributesBuffer);
+    final texCoordData = mesh.extractTexCoord(attributesBuffer);
 
     final indicesBuffer = glContext.createBuffer();
     mesh.bindIndicesData(glContext, indicesBuffer);
     final indicesData = mesh.extractIndicesData(indicesBuffer);
 
     return CubeMeshData._(
-      attributesBuffer, positionsData, normalsData, indicesBuffer, indicesData);
+      attributesBuffer,
+      positionsData,
+      normalsData,
+      texCoordData,
+      indicesBuffer,
+      indicesData);
   }
 
   @override

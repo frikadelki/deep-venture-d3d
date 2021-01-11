@@ -71,6 +71,8 @@ abstract class MeshData {
 
   VertexAttributeData get normalsData;
 
+  VertexAttributeData get texCoordData;
+
   IndicesArrayData get indices;
 }
 

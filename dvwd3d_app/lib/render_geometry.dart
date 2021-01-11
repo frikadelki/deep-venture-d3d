@@ -19,30 +19,40 @@ extension MeshGeometryUtils on MeshGeometry {
   }
   
   VertexAttributeData extractPositions(gl.Buffer buffer) {
-    final attrib = getAttrib(_A_NAME_POSITION);
-    if (attrib == null) {
+    final attribute = getAttrib(_A_NAME_POSITION);
+    if (attribute == null) {
       throw ArgumentError(
         'Mesh did not contain "$_A_NAME_POSITION" attribute.');
     }
-    return _extractAttribute(buffer, attrib);
+    return _extractAttribute(buffer, attribute);
   }
 
   VertexAttributeData extractNormals(gl.Buffer buffer) {
-    final attrib = getAttrib(_A_NAME_NORMAL);
-    if (attrib == null) {
+    final attribute = getAttrib(_A_NAME_NORMAL);
+    if (attribute == null) {
       throw ArgumentError(
         'Mesh did not contain "$_A_NAME_NORMAL" attribute.');
     }
-    return _extractAttribute(buffer, attrib);
+    return _extractAttribute(buffer, attribute);
   }
 
-  VertexAttributeData _extractAttribute(gl.Buffer buffer, VertexAttrib attrib) {
+  VertexAttributeData extractTexCoord(gl.Buffer buffer) {
+    final attribute = getAttrib(_A_NAME_TEXCOORD0);
+    if (attribute == null) {
+      throw ArgumentError(
+        'Mesh did not contain "$_A_NAME_TEXCOORD0" attribute.');
+    }
+    return _extractAttribute(buffer, attribute);
+  }
+
+  VertexAttributeData _extractAttribute(
+    gl.Buffer buffer, VertexAttrib attribute) {
     return VertexAttributeData(
       buffer,
-      VertexAttributeSizeExt.fromSize(attrib.size),
-      _decodeType(attrib),
-      offset: attrib.offset,
-      stride: attrib.stride);
+      VertexAttributeSizeExt.fromSize(attribute.size),
+      _decodeType(attribute),
+      offset: attribute.offset,
+      stride: attribute.stride);
   }
   
   VertexAttributeType _decodeType(VertexAttrib attrib) {

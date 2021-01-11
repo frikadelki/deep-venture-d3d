@@ -57,14 +57,19 @@ attribute vec3 position;
 
 attribute vec3 normal;
 
+attribute vec2 texCoord;
+
 varying vec3 varPosition;
 
 varying vec3 varNormal;
+
+varying vec2 varTexCoord;
 
 void main() {
   vec4 worldPosition = modelMatrix * vec4(position, 1.0);
   varPosition = vec3(worldPosition) / worldPosition.w;
   varNormal = normalize(normalsMatrix * vec4(normal, 0.0)).xyz;
+  varTexCoord = texCoord;
   gl_Position = viewProjectionMatrix * worldPosition;
 }
 ''',
@@ -84,12 +89,24 @@ varying vec3 varPosition;
 
 varying vec3 varNormal;
 
+varying vec2 varTexCoord;
+
+const float TCD_THRESHOLD = 0.02;
+
 void main() {
   LightsIntensity light = lightsIntensity(
     varPosition, varNormal, cameraEyePosition, modelColorSpecular.w);
   vec3 diffuseColor = (light.ambient + light.diffuse) * modelColorDiffuse;
   vec3 specularColor = light.specular * modelColorSpecular.xyz;
-  gl_FragColor = vec4(diffuseColor + specularColor, 1.0);
+  float tcdx = 0.5 - abs(varTexCoord.x - 0.5);
+  float tcdy = 0.5 - abs(varTexCoord.y - 0.5);
+  float tcdMin = min(tcdx, tcdy);
+  float attune = 1.0;
+  if (tcdMin <= TCD_THRESHOLD) {
+    attune = 0.4 + 0.6 * tcdMin / TCD_THRESHOLD;
+  }
+  vec3 color = attune * (diffuseColor + specularColor);
+  gl_FragColor = vec4(color, 1.0);
 }
 '''
 );
@@ -108,6 +125,8 @@ class TestProgram_03  {
   late final VertexAttribute _position;
 
   late final VertexAttribute _normal;
+
+  late final VertexAttribute _texCoord;
 
   late final LightsBinding _lightsBinding;
 
@@ -128,6 +147,7 @@ class TestProgram_03  {
     _normalsMatrix = _program.getUniform('normalsMatrix');
     _position = _program.getVertexAttribute('position');
     _normal = _program.getVertexAttribute('normal');
+    _texCoord = _program.getVertexAttribute('texCoord');
     _lightsBinding = lightsSnippet.makeBinding(_program);
     _cameraEyePosition = _program.getUniform('cameraEyePosition');
     _modelColorDiffuse = _program.getUniform('modelColorDiffuse');
@@ -203,6 +223,7 @@ class TestScene03 {
     _grid.importLayer(_GridFloor, -1);
     _grid.importLayer(_GridWalls1, 0);
     _grid.importLayer(_GridWalls2, 1);
+    _grid.importLayer(_Ceiling2, 2);
 
     _avatar = Avatar(gridGeometry);
 
@@ -288,6 +309,7 @@ class TestScene03 {
     final meshData = _assets.cubeMeshData;
     _program._position.data = meshData.positionsData;
     _program._normal.data = meshData.normalsData;
+    _program._texCoord.data = meshData.texCoordData;
     _program._modelColorDiffuse.data = Vector3UniformData(_C.CubeDiffuseColor);
     _program._modelColorSpecular.data = Vector4UniformData(_C.CubeSpecularColor);
     _program._indicesArray.data = meshData.indices;
@@ -393,9 +415,9 @@ class Avatar {
 
 final _GridFloor = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 0, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 0, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 0, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
@@ -422,6 +444,28 @@ final _GridWalls2 = [
   <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
   <int>[ 0, 1, 0, 0, 0, 0, 0, 0, ],
   <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
+];
+
+final _Ceiling = [
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
+  <int>[ 0, 1, 1, 1, 0, 1, 0, 0, ],
+  <int>[ 1, 0, 1, 1, 0, 0, 0, 0, ],
+  <int>[ 0, 0, 1, 1, 0, 0, 0, 0, ],
+  <int>[ 1, 1, 1, 1, 0, 1, 0, 0, ],
+  <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
+];
+
+final _Ceiling2 = [
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
 ];
 
 class Grid {
