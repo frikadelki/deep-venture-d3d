@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:web_gl' as gl;
 
 import 'package:vector_math/vector_math.dart';
+import 'package:frock_runtime/frock_runtime.dart';
 
 import 'render_lights.dart';
 import 'render_primitives.dart';
@@ -20,6 +21,7 @@ class TestScene_03_Delegate implements SceneDelegate {
 
   @override
   void onKeyDown(SceneKeyCode code) {
+    _scene.handleAction(code);
   }
 
   @override
@@ -142,7 +144,7 @@ class _C {
 
   static final AmbientColor = Vector3(0.16, 0.16, 0.16);
 
-  static final AvatarStart = GridCoordinate(3, 1, 0);
+  static final AvatarStart = GridVector(3, 3, 0);
 
   static final AvatarHeight = 1.5;
   
@@ -164,6 +166,8 @@ class _C {
 }
 
 class TestScene03 {
+  final _lifetime = PlainLifetime();
+
   final gl.RenderingContext _glContext;
 
   late final Assets _assets;
@@ -203,11 +207,21 @@ class TestScene03 {
     _lights.ambientColor.setFrom(_C.AmbientColor);
     _lights.pointLights.add(_avatar.lantern);
 
-    _updateFromAvatar();
+    _avatar._coordinate.observe(_lifetime, (_) {
+      _updateFromAvatar();
+    });
   }
 
   void _updateFromAvatar() {
     _camera.setLookAt(_avatar.eye, _avatar.lookAt, _avatar.up);
+  }
+
+  void handleAction(SceneKeyCode code) {
+    if (SceneKeyCode.R == code) {
+      _avatar.reset();
+    } else {
+      _avatar.moveFw();
+    }
   }
 
   void draw() {
@@ -287,9 +301,11 @@ class Assets {
 class Avatar {
   final GridGeometry _gridGeometry;
 
-  final eye = Vector3.zero();
+  final _coordinate = ValueProperty(GridVector.zero());
 
-  final direction = Vector3.zero();
+  final _direction = ValueProperty(GridAbsoluteDirection.North);
+
+  final eye = Vector3.zero();
 
   final up = Vector3(0.0, 1.0, 0.0);
 
@@ -298,39 +314,41 @@ class Avatar {
   final lantern = PointLight();
 
   Avatar(this._gridGeometry) {
+    _direction.value;
     lantern.color.setFrom(_C.AvatarLanternColor);
     reset();
   }
+  
+  void moveFw() {
+    final old = _coordinate.value;
+    final coordinate = old.add(_direction.value.gridVector);
+    _updateGridCoordinate(coordinate);
+  }
 
   void reset() {
+    _updateGridCoordinate(_C.AvatarStart);
+  }
+
+  void _updateGridCoordinate(GridVector coordinate) {
     _gridGeometry.calcTranslationVector(
-      eye, _C.AvatarStart, _gridGeometry.cellSize);
+      eye, coordinate, _gridGeometry.cellSize);
     eye.y += _C.AvatarHeight - _gridGeometry.cellSize / 2.0;
 
-    direction.setValues(0.0, 0.0, -1.0);
-    direction.normalize();
+    lookAt.setFrom(eye);
+    lookAt.add(_direction.value.worldVector);
 
-    _updateLookAt();
-    _updateLantern();
-  }
-
-  void _updateLookAt() {
-    lookAt.setValues(
-      eye.x + direction.x,
-      eye.y + direction.y,
-      eye.z + direction.z);
-  }
-
-  void _updateLantern() {
     final tmp = Vector3.zero()
       ..setFrom(up)
       ..normalize()
       ..scale(-0.3);
     lantern.origin
-      ..setFrom(direction)
+      ..setFrom(_direction.value.worldVector)
+      ..normalize()
       ..scale(0.2)
       ..add(eye)
       ..add(tmp);
+
+    _coordinate.value = coordinate;
   }
 }
 
@@ -338,7 +356,7 @@ final _GridFloor = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 0, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
@@ -361,7 +379,7 @@ final _GridWalls2 = [
   <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
   <int>[ 1, 0, 0, 0, 0, 0, 0, 0, ],
   <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
-  <int>[ 1, 0, 0, 0, 0, 1, 0, 0, ],
+  <int>[ 1, 1, 0, 0, 0, 1, 0, 0, ],
   <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
   <int>[ 0, 1, 0, 0, 0, 0, 0, 0, ],
   <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
@@ -382,7 +400,7 @@ class Grid {
         if (value <= 0) {
           continue;
         }
-        final coordinate = GridCoordinate(row, -column, y);
+        final coordinate = GridVector(row, -column, y);
         final matrix = Matrix4.identity();
         _geometry.calcTranslationMatrix(matrix, coordinate, _geometry.cellSize);
         _modelMatrices.add(matrix);
@@ -391,14 +409,107 @@ class Grid {
   }
 }
 
-class GridCoordinate {
+enum GridAbsoluteDirection {
+  North,
+  East,
+  South,
+  West,
+}
+
+class GridAbsoluteDirectionMeta {
+  final GridVector gridVector;
+  
+  final Vector3 worldVector;
+
+  GridAbsoluteDirectionMeta(this.gridVector, this.worldVector);
+}
+
+extension on GridAbsoluteDirection {
+  static final _NorthMeta = GridAbsoluteDirectionMeta(
+    GridVector(0, -1, 0), 
+    Vector3(0.0, 0.0, -1.0));
+
+  static final _EastMeta = GridAbsoluteDirectionMeta(
+    GridVector(1, 0, 0),
+    Vector3(1.0, 0.0, 0.0));
+
+  static final _SouthMeta = GridAbsoluteDirectionMeta(
+    GridVector(0, 1, 0),
+    Vector3(0.0, 0.0, 1.0));
+
+  static final _WestMeta = GridAbsoluteDirectionMeta(
+    GridVector(-1, 0, 0),
+    Vector3(-1.0, 0.0, 0.0));
+
+  GridAbsoluteDirectionMeta get meta {
+    switch (this) {
+      case GridAbsoluteDirection.North:
+        return _NorthMeta;
+        
+      case GridAbsoluteDirection.East:
+        return _EastMeta;
+        
+      case GridAbsoluteDirection.South:
+        return _SouthMeta;
+        
+      case GridAbsoluteDirection.West:
+        return _WestMeta;
+    }
+  }
+
+  GridVector get gridVector {
+    return meta.gridVector;
+  }
+  
+  Vector3 get worldVector {
+    return meta.worldVector;
+  }
+}
+
+enum GridRelativeDirection {
+  Forward,
+  Right,
+  Backward,
+  Left,
+}
+
+extension on GridRelativeDirection {
+  GridRelativeDirection? fromKeyCode(SceneKeyCode code) {
+    switch (code) {
+      case SceneKeyCode.W:
+        return GridRelativeDirection.Forward;
+
+      case SceneKeyCode.A:
+        return GridRelativeDirection.Left;
+
+      case SceneKeyCode.S:
+        return GridRelativeDirection.Backward;
+
+      case SceneKeyCode.D:
+        return GridRelativeDirection.Right;
+
+      default:
+        return null;
+    }
+  }
+}
+
+class GridVector {
   final int x;
 
   final int z;
 
   final int y;
 
-  const GridCoordinate(this.x, this.z, this.y);
+  const GridVector(this.x, this.z, this.y);
+
+  factory GridVector.zero() {
+    return const GridVector(0, 0, 0);
+  }
+
+  GridVector add(GridVector d) {
+    return GridVector(x + d.x, z + d.z, y + d.y);
+  }
 
   void realWorldPoint(Vector3 translation, double cellSize, double objectSize) {
     final dSize = objectSize / 2.0;
@@ -417,13 +528,13 @@ class GridGeometry {
   GridGeometry(this.cellSize);
 
   void calcTranslationMatrix(
-    Matrix4 mat, GridCoordinate coordinate, double objectSize) {
+    Matrix4 mat, GridVector coordinate, double objectSize) {
     coordinate.realWorldPoint(_tmp, cellSize, objectSize);
     mat.setTranslation(_tmp);
   }
 
   void calcTranslationVector(
-    Vector3 vector, GridCoordinate coordinate, double objectSize) {
+    Vector3 vector, GridVector coordinate, double objectSize) {
     coordinate.realWorldPoint(vector, cellSize, objectSize);
   }
 }

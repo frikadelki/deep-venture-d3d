@@ -53,17 +53,20 @@ void runRenderOnCanvas(
 
 SceneKeyCode? _decodeKeyCode(html.KeyboardEvent event) {
   switch(event.code) {
-    case 'KeyW':
-      return SceneKeyCode.W;
-
     case 'KeyA':
       return SceneKeyCode.A;
+
+    case 'KeyD':
+      return SceneKeyCode.D;
+
+    case 'KeyR':
+      return SceneKeyCode.R;
 
     case 'KeyS':
       return SceneKeyCode.S;
 
-    case 'KeyD':
-      return SceneKeyCode.D;
+    case 'KeyW':
+      return SceneKeyCode.W;
   }
   return null;
 }

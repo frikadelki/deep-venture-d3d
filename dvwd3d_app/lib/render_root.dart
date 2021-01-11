@@ -4,6 +4,7 @@ enum SceneKeyCode {
   A,
   S,
   D,
+  R,
 }
 
 abstract class SceneDelegate {
