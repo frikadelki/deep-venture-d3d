@@ -38,6 +38,7 @@ void runRenderOnCanvas(
   resize();
 
   void onAnimationFrame(num timestamp) {
+    delegate.animate(timestamp);
     delegate.render();
     html.window.animationFrame.then(onAnimationFrame);
   }

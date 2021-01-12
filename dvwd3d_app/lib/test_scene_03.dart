@@ -25,6 +25,11 @@ class TestScene_03_Delegate implements SceneDelegate {
   }
 
   @override
+  void animate(num timestamp) {
+    _scene.animate(timestamp);
+  }
+
+  @override
   void render() {
     _scene.draw();
   }
@@ -176,6 +181,10 @@ class _C {
 
   static final CubeSpecularColor = Vector4(0.2, 0.7, 0.2, 0.25);
 
+  static final CoinDiffuseColor = Vector3(0.7, 0.3, 0.5);
+
+  static final CoinSpecularColor = Vector4(0.7, 0.2, 0.2, 0.25);
+
   static final GridCellSize = 1.0;
 
   static final ZNear = 0.001;
@@ -197,6 +206,8 @@ class TestScene03 {
   late final TestProgram_03 _program;
 
   late final Grid _grid;
+  
+  final _floaters = <GridPawn>[];
 
   late final Avatar _avatar;
 
@@ -224,6 +235,10 @@ class TestScene03 {
     _grid.importLayer(_GridWalls1, 0);
     _grid.importLayer(_GridWalls2, 1);
     _grid.importLayer(_Ceiling2, 2);
+    
+    final coin1 = GridPawn(gridGeometry, _assets.coinMeshData)
+      ..moveTo(GridVector(3, -4, 1));
+    _floaters.add(coin1);
 
     _avatar = Avatar(gridGeometry);
 
@@ -272,6 +287,13 @@ class TestScene03 {
     }
   }
 
+  void animate(num timestamp) {
+    for (final pawn in _floaters) {
+      final angle = 10 * (timestamp / 1000) * (math.pi / 180);
+      pawn.transform.setRotation(x: angle, y: angle, z: angle);
+    }
+  }
+
   void draw() {
     _glContext.enable(gl.WebGL.CULL_FACE);
     _glContext.cullFace(gl.WebGL.BACK);
@@ -284,26 +306,27 @@ class TestScene03 {
       _camera.viewProjectionMatrix);
     _program._lightsBinding.data = _lights;
     _program._cameraEyePosition.data = Vector3UniformData(_camera.eyePosition);
-    /*for (final object in _testGrid01.objects) {
+    for (final matrix in _grid._voxelsMatrices) {
+      _drawGridVoxel(matrix);
+    }
+    for (final object in _floaters) {
       _drawObject(object);
-    }*/
-    for (final matrix in _grid._modelMatrices) {
-      _drawObjectM(matrix);
     }
   }
 
-  void _drawObject(RenderObject object) {
+  void _drawObject(GridPawn object) {
     _program._modelMatrix.data = object.modelMatrixData;
     _program._normalsMatrix.data = object.normalsMatrixData;
     _program._position.data = object.meshData.positionsData;
     _program._normal.data = object.meshData.normalsData;
-    _program._modelColorDiffuse.data = Vector3UniformData(_C.CubeDiffuseColor);
-    _program._modelColorSpecular.data = Vector4UniformData(_C.CubeSpecularColor);
+    _program._texCoord.data = object.meshData.texCoordData;
+    _program._modelColorDiffuse.data = Vector3UniformData(_C.CoinDiffuseColor);
+    _program._modelColorSpecular.data = Vector4UniformData(_C.CoinSpecularColor);
     _program._indicesArray.data = object.meshData.indices;
     _program._program.draw();
   }
 
-  void _drawObjectM(Matrix4 modelMatrix) {
+  void _drawGridVoxel(Matrix4 modelMatrix) {
     _program._modelMatrix.data = Matrix4UniformData(modelMatrix);
     _program._normalsMatrix.data = Matrix4UniformData(Matrix4.identity());
     final meshData = _assets.cubeMeshData;
@@ -333,10 +356,14 @@ class Assets {
   final _buffers = <DisposableBuffers>[];
   
   late final CubeMeshData cubeMeshData;
+
+  late final CylinderMeshData coinMeshData;
   
   Assets(this._glContext) {
-    cubeMeshData = CubeMeshData(_glContext);
+    cubeMeshData = CubeMeshData.cube(_glContext, 1.0);
     _buffers.add(cubeMeshData);
+    coinMeshData = CylinderMeshData.coin(_glContext, 0.3, 0.1);
+    _buffers.add(coinMeshData);
   }
   
   void dispose() {
@@ -413,6 +440,30 @@ class Avatar {
   }
 }
 
+class GridPawn {
+  final GridGeometry _gridGeometry;
+
+  final transform = Transform();
+
+  late final Matrix4UniformData modelMatrixData;
+
+  late final Matrix4UniformData normalsMatrixData;
+
+  final MeshData meshData;
+
+  GridPawn(this._gridGeometry, this.meshData) {
+    moveTo(GridVector.zero());
+    modelMatrixData = Matrix4UniformData(transform.modelMatrix);
+    normalsMatrixData = Matrix4UniformData(transform.normalsMatrix);
+  }
+
+  void moveTo(GridVector coordinate) {
+    final tmp = Vector3.zero();
+    _gridGeometry.calcTranslationVector(tmp, coordinate, 1.0);
+    transform.setTranslation(tmp);
+  }
+}
+
 final _GridFloor = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 0, 1, ],
@@ -426,7 +477,7 @@ final _GridFloor = [
 
 final _GridWalls1 = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 0, 0, 0, 1, 0, 1, ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, ],
   <int>[ 1, 1, 0, 0, 0, 0, 0, 1, ],
   <int>[ 0, 0, 0, 0, 0, 0, 0, 1, ],
   <int>[ 1, 1, 1, 0, 0, 0, 0, 1, ],
@@ -436,8 +487,8 @@ final _GridWalls1 = [
 ];
 
 final _GridWalls2 = [
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
-  <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
+  <int>[ 0, 0, 0, 1, 1, 1, 0, 0, ],
+  <int>[ 0, 1, 0, 0, 1, 1, 0, 0, ],
   <int>[ 1, 0, 0, 0, 0, 0, 0, 0, ],
   <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
   <int>[ 1, 1, 0, 0, 0, 1, 0, 0, ],
@@ -468,10 +519,12 @@ final _Ceiling2 = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
 ];
 
+
+
 class Grid {
   final GridGeometry _geometry;
 
-  final _modelMatrices = <Matrix4>[];
+  final _voxelsMatrices = <Matrix4>[];
 
   Grid(this._geometry);
 
@@ -486,7 +539,7 @@ class Grid {
         final coordinate = GridVector(row, -column, y);
         final matrix = Matrix4.identity();
         _geometry.calcTranslationMatrix(matrix, coordinate, _geometry.cellSize);
-        _modelMatrices.add(matrix);
+        _voxelsMatrices.add(matrix);
       }
     }
   }

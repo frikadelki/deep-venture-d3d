@@ -25,6 +25,10 @@ class TestScene_02_Delegate implements SceneDelegate {
   }
 
   @override
+  void animate(num timestamp) {
+  }
+
+  @override
   void render() {
     _glContext.enable(gl.WebGL.CULL_FACE);
     _glContext.cullFace(gl.WebGL.BACK);
@@ -188,7 +192,7 @@ class TestScene_02 {
       rethrow;
     }
 
-    final cubeMeshData = CubeMeshData(glContext);
+    final cubeMeshData = CubeMeshData.cube(glContext, 1.0);
     disposableBuffers.add(cubeMeshData);
     
     final cube1 = Cube(cubeMeshData);

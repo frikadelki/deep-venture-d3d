@@ -12,6 +12,8 @@ enum SceneKeyCode {
 abstract class SceneDelegate {
   void onKeyDown(SceneKeyCode code);
 
+  void animate(num timestamp);
+
   void render();
 
   void resize(int width, int height);

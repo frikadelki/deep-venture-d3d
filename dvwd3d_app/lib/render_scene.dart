@@ -85,11 +85,41 @@ abstract class RenderObject {
 }
 
 class Transform {
+  final _translation = Matrix4.identity();
+
+  final _rotation = Matrix4.identity();
+
   final modelMatrix = Matrix4.identity();
 
   final normalsMatrix = Matrix4.identity();
 
+  void setTranslation(Vector3 d) {
+    _translation.setTranslation(d);
+    _updateModel();
+  }
+
   void translate({double dx = 0.0, double dy = 0.0, double dz = 0.0}) {
-    modelMatrix.translate(dx, dy, dz);
+    _translation.translate(dx, dy, dz);
+    _updateModel();
+  }
+  
+  void setRotation({ double x = 0, double y = 0, double z = 0}) {
+    _rotation.setIdentity();
+    _rotation.rotateX(x);
+    _rotation.rotateY(y);
+    _rotation.rotateZ(z);
+    _updateModel();
+    _updateNormals();
+  }
+
+  void _updateModel() {
+    modelMatrix
+      ..setFrom(_translation)
+      ..multiply(_rotation);
+  }
+
+  void _updateNormals() {
+    normalsMatrix
+      ..setFrom(_rotation);
   }
 }

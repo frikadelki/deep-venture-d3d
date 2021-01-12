@@ -20,6 +20,10 @@ class TestScene_01_Delegate implements SceneDelegate {
   }
 
   @override
+  void animate(num timestamp) {
+  }
+
+  @override
   void render() {
     _glContext.clearColor(1.0, 0.5, 0.5, 1.0);
     _glContext.clear(gl.WebGL.COLOR_BUFFER_BIT);

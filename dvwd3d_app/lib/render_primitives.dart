@@ -31,11 +31,13 @@ class CubeMeshData implements MeshData, DisposableBuffers {
     this._indicesGlBuffer,
     this.indices);
 
-  factory CubeMeshData(gl.RenderingContext glContext) {
+  factory CubeMeshData.cube(gl.RenderingContext glContext, double size) {
+    final hSize = size / 2.0;
     final cubeGenerator = CubeGenerator();
     final cubeFlags = GeometryGeneratorFlags(
       texCoords: true, normals: true, tangents: false);
-    final mesh = cubeGenerator.createCube(0.5, 0.5, 0.5, flags: cubeFlags);
+    final mesh = cubeGenerator.createCube(
+      hSize, hSize, hSize, flags: cubeFlags);
 
     final attributesBuffer = glContext.createBuffer();
     mesh.bindAttributesData(glContext, attributesBuffer);
@@ -78,5 +80,64 @@ class Cube implements RenderObject {
   Cube(this.meshData) {
     modelMatrixData = Matrix4UniformData(transform.modelMatrix);
     normalsMatrixData = Matrix4UniformData(transform.normalsMatrix);
+  }
+}
+
+class CylinderMeshData implements MeshData, DisposableBuffers {
+  final gl.Buffer _attributesGlBuffer;
+
+  @override
+  final VertexAttributeData positionsData;
+
+  @override
+  final VertexAttributeData normalsData;
+
+  @override
+  final VertexAttributeData texCoordData;
+
+  final gl.Buffer _indicesGlBuffer;
+
+  @override
+  final IndicesArrayData indices;
+
+  CylinderMeshData._(
+    this._attributesGlBuffer,
+    this.positionsData,
+    this.normalsData,
+    this.texCoordData,
+    this._indicesGlBuffer,
+    this.indices);
+
+  factory CylinderMeshData.coin(
+    gl.RenderingContext glContext, double radius, double thickness) {
+    final cylinderGenerator = CylinderGenerator();
+    final flags = GeometryGeneratorFlags(
+      texCoords: true, normals: true, tangents: false);
+    final mesh = cylinderGenerator.createCylinder(
+      radius, radius, thickness, segments: 32, flags: flags);
+
+    final attributesBuffer = glContext.createBuffer();
+    mesh.bindAttributesData(glContext, attributesBuffer);
+    final positionsData = mesh.extractPositions(attributesBuffer);
+    final normalsData = mesh.extractNormals(attributesBuffer);
+    final texCoordData = mesh.extractTexCoord(attributesBuffer);
+
+    final indicesBuffer = glContext.createBuffer();
+    mesh.bindIndicesData(glContext, indicesBuffer);
+    final indicesData = mesh.extractIndicesData(indicesBuffer);
+
+    return CylinderMeshData._(
+      attributesBuffer,
+      positionsData,
+      normalsData,
+      texCoordData,
+      indicesBuffer,
+      indicesData);
+  }
+
+  @override
+  void disposeBuffers(gl.RenderingContext glContext) {
+    glContext.deleteBuffer(_attributesGlBuffer);
+    glContext.deleteBuffer(_indicesGlBuffer);
   }
 }
