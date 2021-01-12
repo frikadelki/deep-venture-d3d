@@ -3,11 +3,11 @@ import 'dart:web_gl' as gl;
 
 import 'package:vector_math/vector_math.dart';
 
-import 'render_lights.dart';
-import 'render_primitives.dart';
-import 'render_program.dart';
-import 'render_root.dart';
-import 'render_scene.dart';
+import '../engine/lights.dart';
+import '../engine/program.dart';
+import '../misc/mesh.dart';
+import '../misc/scene.dart';
+import '../misc/utils.dart';
 
 class TestScene_02_Delegate implements SceneDelegate {
   final gl.RenderingContext _glContext;
@@ -163,7 +163,7 @@ class TestScene_02 {
 
   final TestProgram_02 _program;
 
-  final List<RenderObject> _objects;
+  final List<Cube> _objects;
 
   final LightsData _lights;
 
@@ -258,7 +258,7 @@ class TestScene_02 {
     }
   }
 
-  void _drawObject(RenderObject object) {
+  void _drawObject(Cube object) {
     _program._modelMatrix.data = object.modelMatrixData;
     _program._normalsMatrix.data = object.normalsMatrixData;
     _program._position.data = object.meshData.positionsData;
@@ -277,5 +277,20 @@ class TestScene_02 {
       disposable.disposeBuffers(_glContext);
     }
     _buffers.clear();
+  }
+}
+
+class Cube {
+  final transform = Transform();
+
+  late final Matrix4UniformData modelMatrixData;
+
+  late final Matrix4UniformData normalsMatrixData;
+
+  final CubeMeshData meshData;
+
+  Cube(this.meshData) {
+    modelMatrixData = Matrix4UniformData(transform.modelMatrix);
+    normalsMatrixData = Matrix4UniformData(transform.normalsMatrix);
   }
 }

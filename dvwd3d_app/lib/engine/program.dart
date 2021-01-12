@@ -12,10 +12,6 @@ class ProgramException implements Exception {
   ProgramException(this.reason, this.infoLog);
 }
 
-abstract class DisposableBuffers {
-  void disposeBuffers(gl.RenderingContext glContext);
-}
-
 abstract class UniformData {
   void _bind(gl.RenderingContext glContext, gl.UniformLocation location);
 }

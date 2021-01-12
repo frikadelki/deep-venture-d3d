@@ -1,3 +1,8 @@
+import 'dart:web_gl' as gl;
+
+abstract class DisposableBuffers {
+  void disposeBuffers(gl.RenderingContext glContext);
+}
 
 enum SceneKeyCode {
   W,

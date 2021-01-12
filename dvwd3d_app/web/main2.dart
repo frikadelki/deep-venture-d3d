@@ -1,10 +1,10 @@
 import 'dart:html' as html;
 import 'dart:web_gl' as gl;
 
-import 'package:dvwd3d_app/render_root.dart';
-import 'package:dvwd3d_app/test_scene_01.dart';
-import 'package:dvwd3d_app/test_scene_02.dart';
-import 'package:dvwd3d_app/test_scene_03.dart';
+import 'package:dvwd3d_app/misc/utils.dart';
+import 'package:dvwd3d_app/testss/test_scene_01.dart';
+import 'package:dvwd3d_app/testss/test_scene_02.dart';
+import 'package:dvwd3d_app/ymain.dart';
 
 void main() {
   html.CanvasElement findCanvas(String selectors) {
@@ -12,8 +12,8 @@ void main() {
     return element as html.CanvasElement;
   }
   final canvas = findCanvas('#main-render-canvas');
-  //runRenderOnCanvas(canvas, (glContext) => TestRender01(glContext));
-  //runRenderOnCanvas(canvas, (glContext) => TestRender02(glContext));
+  //runRenderOnCanvas(canvas, (glContext) => TestScene_01_Delegate(glContext));
+  //runRenderOnCanvas(canvas, (glContext) => TestScene_02_Delegate(glContext));
   runRenderOnCanvas(canvas, (glContext) => TestScene_03_Delegate(glContext));
 }
 

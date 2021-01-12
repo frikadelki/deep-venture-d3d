@@ -1,9 +1,8 @@
 import 'dart:typed_data';
 import 'dart:web_gl' as gl;
 
-import 'package:dvwd3d_app/render_root.dart';
-
-import 'render_program.dart';
+import '../engine/program.dart';
+import '../misc/utils.dart';
 
 class TestScene_01_Delegate implements SceneDelegate {
   final gl.RenderingContext _glContext;
