@@ -21,6 +21,10 @@ class Vector3UniformData implements UniformData {
 
   Vector3UniformData(this.data);
 
+  factory Vector3UniformData.auto() {
+    return Vector3UniformData(Vector3.zero());
+  }
+
   @override
   void _bind(gl.RenderingContext glContext, gl.UniformLocation location) {
     glContext.uniform3fv(location, data.storage);
@@ -43,6 +47,10 @@ class Vector4UniformData implements UniformData {
 
   Vector4UniformData(this.data);
 
+  factory Vector4UniformData.auto() {
+    return Vector4UniformData(Vector4.zero());
+  }
+
   @override
   void _bind(gl.RenderingContext glContext, gl.UniformLocation location) {
     glContext.uniform4fv(location, data.storage);
@@ -64,6 +72,10 @@ class Matrix4UniformData extends UniformData {
   final Matrix4 matrix;
 
   Matrix4UniformData(this.matrix);
+
+  factory Matrix4UniformData.auto() {
+    return Matrix4UniformData(Matrix4.identity());
+  }
 
   @override
   void _bind(gl.RenderingContext glContext, gl.UniformLocation location) {

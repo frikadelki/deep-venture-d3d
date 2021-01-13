@@ -9,7 +9,9 @@ import 'engine/program.dart';
 import 'misc/mesh.dart';
 import 'misc/scene.dart';
 import 'misc/utils.dart';
+import 'ymain/grid.dart';
 import 'ymain/grid_geometry.dart';
+import 'ymain/pawn.dart';
 
 class TestScene_03_Delegate implements SceneDelegate {
   final gl.RenderingContext _glContext;
@@ -44,124 +46,6 @@ class TestScene_03_Delegate implements SceneDelegate {
   @override
   void dispose() {
     _scene.dispose();
-  }
-}
-
-ProgramSource TestProgram03_Source(LightsSnippet lights) => ProgramSource(
-'TestProgram_03',
-
-'''
-precision mediump float;
-
-uniform mat4 viewProjectionMatrix;
-
-uniform mat4 modelMatrix;
-
-uniform mat4 normalsMatrix;
-
-attribute vec3 position;
-
-attribute vec3 normal;
-
-attribute vec2 texCoord;
-
-varying vec3 varPosition;
-
-varying vec3 varNormal;
-
-varying vec2 varTexCoord;
-
-void main() {
-  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-  varPosition = vec3(worldPosition) / worldPosition.w;
-  varNormal = normalize(normalsMatrix * vec4(normal, 0.0)).xyz;
-  varTexCoord = texCoord;
-  gl_Position = viewProjectionMatrix * worldPosition;
-}
-''',
-
-'''
-precision mediump float;
-
-${lights.source}
-
-uniform vec3 cameraEyePosition;
-
-uniform vec3 modelColorDiffuse;
-
-uniform vec4 modelColorSpecular;
-
-varying vec3 varPosition;
-
-varying vec3 varNormal;
-
-varying vec2 varTexCoord;
-
-const float TCD_THRESHOLD = 0.02;
-
-void main() {
-  LightsIntensity light = lightsIntensity(
-    varPosition, varNormal, cameraEyePosition, modelColorSpecular.w);
-  vec3 diffuseColor = (light.ambient + light.diffuse) * modelColorDiffuse;
-  vec3 specularColor = light.specular * modelColorSpecular.xyz;
-  float tcdx = 0.5 - abs(varTexCoord.x - 0.5);
-  float tcdy = 0.5 - abs(varTexCoord.y - 0.5);
-  float tcdMin = min(tcdx, tcdy);
-  float attune = 1.0;
-  if (tcdMin <= TCD_THRESHOLD) {
-    attune = 0.4 + 0.6 * tcdMin / TCD_THRESHOLD;
-  }
-  vec3 color = attune * (diffuseColor + specularColor);
-  gl_FragColor = vec4(color, 1.0);
-}
-'''
-);
-
-class TestProgram_03  {
-  final gl.RenderingContext _glContext;
-
-  late final Program _program;
-
-  late final Uniform _viewProjectionMatrix;
-
-  late final Uniform _modelMatrix;
-
-  late final Uniform _normalsMatrix;
-
-  late final VertexAttribute _position;
-
-  late final VertexAttribute _normal;
-
-  late final VertexAttribute _texCoord;
-
-  late final LightsBinding _lightsBinding;
-
-  late final Uniform _cameraEyePosition;
-
-  late final Uniform _modelColorDiffuse;
-
-  late final Uniform _modelColorSpecular;
-
-  late final IndicesArray _indicesArray;
-
-  TestProgram_03._(this._glContext) {
-    final lightsSnippet = LightsSnippet(2);
-    final source = TestProgram03_Source(lightsSnippet);
-    _program = Program(_glContext, source);
-    _viewProjectionMatrix = _program.getUniform('viewProjectionMatrix');
-    _modelMatrix = _program.getUniform('modelMatrix');
-    _normalsMatrix = _program.getUniform('normalsMatrix');
-    _position = _program.getVertexAttribute('position');
-    _normal = _program.getVertexAttribute('normal');
-    _texCoord = _program.getVertexAttribute('texCoord');
-    _lightsBinding = lightsSnippet.makeBinding(_program);
-    _cameraEyePosition = _program.getUniform('cameraEyePosition');
-    _modelColorDiffuse = _program.getUniform('modelColorDiffuse');
-    _modelColorSpecular = _program.getUniform('modelColorSpecular');
-    _indicesArray = IndicesArray(_glContext);
-    _program.drawCalls = CustomDrawCalls((glContext) {
-      _indicesArray.drawAllTriangles();
-    });
   }
 }
 
@@ -204,11 +88,13 @@ class TestScene03 {
 
   late final Assets _assets;
 
-  late final TestProgram_03 _program;
+  late final GridProgram _gridProgram;
+
+  late final PawnProgram _pawnProgram;
 
   late final Grid _grid;
   
-  final _floaters = <GridPawn>[];
+  final _pawns = <GridPawn>[];
 
   late final Avatar _avatar;
 
@@ -227,19 +113,29 @@ class TestScene03 {
 
   TestScene03._(this._glContext) {
     _assets = Assets(_glContext);
-    _program = TestProgram_03._(_glContext);
+    _gridProgram = GridProgram(_glContext);
+    _pawnProgram = PawnProgram(_glContext);
 
     final gridGeometry = GridGeometry(_C.GridCellSize);
 
-    _grid = Grid(gridGeometry);
+    _grid = Grid(
+      gridGeometry,
+      _assets.cubeMeshData,
+      _C.CubeDiffuseColor,
+      _C.CubeSpecularColor);
     _grid.importLayer(_GridFloor, -1);
     _grid.importLayer(_GridWalls1, 0);
     _grid.importLayer(_GridWalls2, 1);
     _grid.importLayer(_Ceiling2, 2);
     
-    final coin1 = GridPawn(gridGeometry, _assets.coinMeshData)
+    final coin1 = GridPawn(
+      gridGeometry,
+      _assets.coinMeshData,
+      _C.CoinDiffuseColor,
+      _C.CoinSpecularColor);
+    coin1
       ..moveTo(GridVector(3, -4, 1));
-    _floaters.add(coin1);
+    _pawns.add(coin1);
 
     _avatar = Avatar(gridGeometry);
 
@@ -289,7 +185,7 @@ class TestScene03 {
   }
 
   void animate(num timestamp) {
-    for (final pawn in _floaters) {
+    for (final pawn in _pawns) {
       final angle = 10 * (timestamp / 1000) * (math.pi / 180);
       pawn.transform.setRotation(x: angle, y: angle, z: angle);
     }
@@ -303,41 +199,20 @@ class TestScene03 {
     _glContext.clearColorFrom(_C.ClearColor);
     _glContext.clear(gl.WebGL.COLOR_BUFFER_BIT | gl.WebGL.DEPTH_BUFFER_BIT);
 
-    _program._viewProjectionMatrix.data = Matrix4UniformData(
-      _camera.viewProjectionMatrix);
-    _program._lightsBinding.data = _lights;
-    _program._cameraEyePosition.data = Vector3UniformData(_camera.eyePosition);
-    for (final matrix in _grid._voxelsMatrices) {
-      _drawGridVoxel(matrix);
-    }
-    for (final object in _floaters) {
-      _drawObject(object);
-    }
+    drawGrid();
+    drawPawns();
   }
 
-  void _drawObject(GridPawn object) {
-    _program._modelMatrix.data = object.modelMatrixData;
-    _program._normalsMatrix.data = object.normalsMatrixData;
-    _program._position.data = object.meshData.positionsData;
-    _program._normal.data = object.meshData.normalsData;
-    _program._texCoord.data = object.meshData.texCoordData;
-    _program._modelColorDiffuse.data = Vector3UniformData(_C.CoinDiffuseColor);
-    _program._modelColorSpecular.data = Vector4UniformData(_C.CoinSpecularColor);
-    _program._indicesArray.data = object.meshData.indices;
-    _program._program.draw();
+  void drawGrid() {
+    _gridProgram.setup(_lights, _camera);
+    _gridProgram.draw(_grid);
   }
 
-  void _drawGridVoxel(Matrix4 modelMatrix) {
-    _program._modelMatrix.data = Matrix4UniformData(modelMatrix);
-    _program._normalsMatrix.data = Matrix4UniformData(Matrix4.identity());
-    final meshData = _assets.cubeMeshData;
-    _program._position.data = meshData.positionsData;
-    _program._normal.data = meshData.normalsData;
-    _program._texCoord.data = meshData.texCoordData;
-    _program._modelColorDiffuse.data = Vector3UniformData(_C.CubeDiffuseColor);
-    _program._modelColorSpecular.data = Vector4UniformData(_C.CubeSpecularColor);
-    _program._indicesArray.data = meshData.indices;
-    _program._program.draw();
+  void drawPawns() {
+    _pawnProgram.setup(_lights, _camera);
+    for (final pawn in _pawns) {
+      _pawnProgram.draw(pawn);
+    }
   }
 
   void resize(int width, int height) {
@@ -346,7 +221,8 @@ class TestScene03 {
   }
 
   void dispose() {
-    _program._program.dispose();
+    _gridProgram.dispose();
+    _pawnProgram.dispose();
     _assets.dispose();
   }
 }
@@ -441,30 +317,6 @@ class Avatar {
   }
 }
 
-class GridPawn {
-  final GridGeometry _gridGeometry;
-
-  final transform = Transform();
-
-  late final Matrix4UniformData modelMatrixData;
-
-  late final Matrix4UniformData normalsMatrixData;
-
-  final MeshData meshData;
-
-  GridPawn(this._gridGeometry, this.meshData) {
-    moveTo(GridVector.zero());
-    modelMatrixData = Matrix4UniformData(transform.modelMatrix);
-    normalsMatrixData = Matrix4UniformData(transform.normalsMatrix);
-  }
-
-  void moveTo(GridVector coordinate) {
-    final tmp = Vector3.zero();
-    _gridGeometry.calcTranslationVector(tmp, coordinate, 1.0);
-    transform.setTranslation(tmp);
-  }
-}
-
 final _GridFloor = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
   <int>[ 1, 1, 1, 1, 1, 1, 0, 1, ],
@@ -520,26 +372,3 @@ final _Ceiling2 = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
 ];
 
-class Grid {
-  final GridGeometry _geometry;
-
-  final _voxelsMatrices = <Matrix4>[];
-
-  Grid(this._geometry);
-
-  void importLayer(List<List<int>> data, int y) {
-    for (var row = 0; row < data.length; row++) {
-      final rowData = data[row];
-      for (var column = 0; column < rowData.length; column++) {
-        final value = rowData[column];
-        if (value <= 0) {
-          continue;
-        }
-        final coordinate = GridVector(row, -column, y);
-        final matrix = Matrix4.identity();
-        _geometry.calcTranslationMatrix(matrix, coordinate, _geometry.cellSize);
-        _voxelsMatrices.add(matrix);
-      }
-    }
-  }
-}
