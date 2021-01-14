@@ -54,6 +54,8 @@ class _C {
 
   static final AmbientColor = Vector3(0.16, 0.16, 0.16);
 
+  static final AvatarMoveTime = 640.0;
+
   static final AvatarStartCoordinate = GridVector(3, 3, 0);
 
   static final AvatarStartDirection = GridAbsoluteDirection.North;
@@ -155,19 +157,19 @@ class TestScene03 {
   void handleAction(SceneKeyCode code) {
     switch (code) {
       case SceneKeyCode.W:
-        _avatar.move(GridRelativeDirection.Forward);
+        _avatar.strafe(GridRelativeDirection.Forward);
         break;
 
       case SceneKeyCode.A:
-        _avatar.move(GridRelativeDirection.Left);
+        _avatar.strafe(GridRelativeDirection.Left);
         break;
 
       case SceneKeyCode.S:
-        _avatar.move(GridRelativeDirection.Backward);
+        _avatar.strafe(GridRelativeDirection.Backward);
         break;
 
       case SceneKeyCode.D:
-        _avatar.move(GridRelativeDirection.Right);
+        _avatar.strafe(GridRelativeDirection.Right);
         break;
 
       case SceneKeyCode.Q:
@@ -185,6 +187,7 @@ class TestScene03 {
   }
 
   void animate(num timestamp) {
+    _avatar.animate(timestamp);
     for (final pawn in _pawns) {
       final angle = 10 * (timestamp / 1000) * (math.pi / 180);
       pawn.transform.setRotation(x: angle, y: angle, z: angle);
@@ -258,9 +261,13 @@ class Avatar {
 
   final _direction = ValueProperty(GridAbsoluteDirection.North);
 
-  Source<void> get onWorldUpdate => [ _coordinate, _direction ].merge();
+  final _onWorldUpdate = Signal<void>();
+
+  Source<void> get onWorldUpdate => _onWorldUpdate;
 
   final eye = Vector3.zero();
+  
+  final _worldDirection = Vector3.zero();
 
   final up = Vector3(0.0, 1.0, 0.0);
 
@@ -268,52 +275,134 @@ class Avatar {
 
   final lantern = PointLight();
 
+  Activity? _currentMove;
+
   Avatar(this._gridGeometry) {
-    _direction.value;
     lantern.color.setFrom(_C.AvatarLanternColor);
     reset();
   }
 
-  void reset() {
-    final newCoordinate = _C.AvatarStartCoordinate;
-    final newDirection = _C.AvatarStartDirection;
-    _updateWorld(newCoordinate, newDirection);
-    _coordinate.value = newCoordinate;
-    _direction.value = newDirection;
+  bool get _canMove {
+    return _currentMove == null;
   }
 
-  void move(GridRelativeDirection relativeDirection) {
+  void _startMove(Activity move) {
+    if (!_canMove) {
+      assert(false);
+      return;
+    }
+    _currentMove = move;
+  }
+
+  void animate(num timestamp) {
+    final move = _currentMove;
+    if (move == null) {
+      return;
+    }
+    move.animate(timestamp);
+    if (move.finished) {
+      _currentMove = null;
+      _snapWorld();
+    }
+  }
+
+  void reset() {
+    if (!_canMove) {
+      return;
+    }
+    final newCoordinate = _C.AvatarStartCoordinate;
+    final newDirection = _C.AvatarStartDirection;
+    _coordinate.value = newCoordinate;
+    _direction.value = newDirection;
+    _snapWorld();
+  }
+
+  void strafe(GridRelativeDirection relativeDirection) {
+    if (!_canMove) {
+      return;
+    }
     final oldCoordinate = _coordinate.value;
     final absoluteDirection = _direction.value.relative(relativeDirection);
     final newCoordinate = oldCoordinate.add(absoluteDirection.gridVector);
-    _updateWorld(newCoordinate, _direction.value);
+
     _coordinate.value = newCoordinate;
+
+    _startStrafe(oldCoordinate, newCoordinate);
+  }
+
+  void _startStrafe(GridVector from, GridVector to) {
+    final _eyeOld = Vector3.zero();
+    final _eyeNew = Vector3.zero();
+    _calcEye(_eyeOld, from);
+    _calcEye(_eyeNew, to);
+    void _step(double t) {
+      eye
+        ..setFrom(_eyeNew)
+        ..sub(_eyeOld)
+        ..scale(t)
+        ..add(_eyeOld);
+      _updateWorld();
+    }
+    _startMove(DelegateActivity(_C.AvatarMoveTime, _step));
   }
 
   void rotate(GridRotation rotation) {
-    final newDirection = _direction.value.rotate(rotation);
-    _updateWorld(_coordinate.value, newDirection);
+    if (!_canMove) {
+      return;
+    }
+    final oldDirection = _direction.value;
+    final newDirection = oldDirection.rotate(rotation);
+
     _direction.value = newDirection;
+
+    _startRotate(oldDirection, newDirection);
   }
 
-  void _updateWorld(GridVector coordinate, GridAbsoluteDirection direction) {
-    _gridGeometry.calcTranslationVector(
-      eye, coordinate, _gridGeometry.cellSize);
-    eye.y += _C.AvatarHeight - _gridGeometry.cellSize / 2.0;
+  void _startRotate(GridAbsoluteDirection from, GridAbsoluteDirection to) {
+    final fromV = from.worldVector;
+    final toV = to.worldVector;
+    final cross = toV.cross(fromV)..normalize();
+    final fullAngle = math.acos(fromV.dot(toV));
+    void _step(double t) {
+      final dAngle = fullAngle * t;
+      final q = Quaternion.axisAngle(cross, dAngle);
+      _worldDirection.setFrom(fromV);
+      q.rotate(_worldDirection);
+      _worldDirection.normalize();
+      _updateWorld();
+    }
+    _startMove(DelegateActivity(_C.AvatarMoveTime, _step));
+  }
 
+  void _calcEye(Vector3 eyeOut, GridVector coordinate) {
+    _gridGeometry.calcTranslationVector(
+      eyeOut, coordinate, _gridGeometry.cellSize);
+    eyeOut.y += _C.AvatarHeight - _gridGeometry.cellSize / 2.0;
+  }
+
+  void _snapWorld() {
+    _calcEye(eye, _coordinate.value);
+    _worldDirection
+      ..setFrom(_direction.value.worldVector)
+      ..normalize();
+    _updateWorld();
+  }
+
+  void _updateWorld() {
     lookAt.setFrom(eye);
-    lookAt.add(direction.worldVector);
+    lookAt.add(_worldDirection);
 
     final tmp = Vector3.zero()
       ..setFrom(up)
       ..normalize()
       ..scale(-0.3);
     lantern.origin
-      ..setFrom(direction.worldVector)
+      ..setFrom(_worldDirection)
       ..normalize()
       ..scale(0.2)
       ..add(eye)
       ..add(tmp);
+    _onWorldUpdate.signal(null);
   }
 }
 
@@ -372,3 +461,42 @@ final _Ceiling2 = [
   <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
 ];
 
+abstract class Activity {
+  bool get finished;
+
+  void animate(num timestamp);
+}
+
+class DelegateActivity implements Activity {
+  final double _lengthMillis;
+
+  final void Function(double t) _update;
+
+  num? _startedTimestamp;
+
+  bool _finished = false;
+
+  @override
+  bool get finished => _finished;
+
+  DelegateActivity(this._lengthMillis, this._update);
+
+  @override
+  void animate(num timestamp) {
+    if (_finished) {
+      assert(false);
+      return;
+    }
+    final startedTimestamp = _startedTimestamp;
+    if (startedTimestamp == null) {
+      _startedTimestamp = timestamp;
+      return;
+    }
+    final elapsed = math.min(timestamp - startedTimestamp, _lengthMillis);
+    final t = elapsed / _lengthMillis;
+    _update(t);
+    if (elapsed >= _lengthMillis) {
+      _finished = true;
+    }
+  }
+}
