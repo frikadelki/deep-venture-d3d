@@ -50,9 +50,9 @@ class TestScene_03_Delegate implements SceneDelegate {
 }
 
 class _C {
-  static final ClearColor = Vector4(0.1, 0.1, 0.1, 1.0);
+  static final ClearColor = Vector4(0.02, 0.02, 0.02, 1.0);
 
-  static final AmbientColor = Vector3(0.16, 0.16, 0.16);
+  static final AmbientColor = Vector3(0.02, 0.02, 0.02);
 
   static final AvatarMoveTime = 640.0;
 
@@ -62,7 +62,9 @@ class _C {
 
   static final AvatarHeight = 1.5;
   
-  static final AvatarLanternColor = Vector3(0.5, 0.4, 0.1);
+  static final AvatarLanternColor = Vector3(0.5, 0.4, 0.2);
+
+  static final AvatarLanternFade = 0.4;
 
   static final CubeDiffuseColor = Vector3(0.2, 0.7, 0.3);
 
@@ -279,6 +281,7 @@ class Avatar {
 
   Avatar(this._gridGeometry) {
     lantern.color.setFrom(_C.AvatarLanternColor);
+    lantern.fadeK = _C.AvatarLanternFade;
     reset();
   }
 
@@ -395,7 +398,7 @@ class Avatar {
     final tmp = Vector3.zero()
       ..setFrom(up)
       ..normalize()
-      ..scale(-0.3);
+      ..scale(-0.2);
     lantern.origin
       ..setFrom(_worldDirection)
       ..normalize()

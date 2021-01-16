@@ -13,6 +13,8 @@ class DirectLight {
 class PointLight {
   final color = Vector3.zero();
 
+  double fadeK = 1.0;
+
   final origin = Vector3.zero();
 }
 
@@ -56,7 +58,7 @@ class LightsBinding {
     _ambientColor.data = Vector3UniformData(ambientColorValue);
     _simpleLightsSpecs.data = Vector4ListUniformData(
       _exporter.simpleLightsSpecs);
-    _simpleLightsColors.data = Vector3ListUniformData(
+    _simpleLightsColors.data = Vector4ListUniformData(
       _exporter.simpleLightsColors);
   }
 }
@@ -66,11 +68,11 @@ class _LightsExporter {
 
   late final Vector4List simpleLightsSpecs;
 
-  late final Vector3List simpleLightsColors;
+  late final Vector4List simpleLightsColors;
 
   _LightsExporter(this.simpleLightsCount) {
     simpleLightsSpecs = Vector4List(simpleLightsCount);
-    simpleLightsColors = Vector3List(simpleLightsCount);
+    simpleLightsColors = Vector4List(simpleLightsCount);
   }
   
   void clear() {
@@ -82,7 +84,7 @@ class _LightsExporter {
       assert(false);
     }
     var lightIndex = 0;
-    void addLight(Vector4 spec, Vector3 color) {
+    void addLight(Vector4 spec, Vector4 color) {
       if (lightIndex >= simpleLightsCount) {
         assert(false);
         return;
@@ -92,22 +94,39 @@ class _LightsExporter {
       lightIndex++;
     }
     void addOff() {
-      addLight(Vector4(0.0, 0.0, 0.0, _SPEC_W_OFF), Vector3.zero());
+      addLight(Vector4(0.0, 0.0, 0.0, _SPEC_W_OFF), Vector4.zero());
     }
-    void addDirect(Vector3 color, Vector3 direction) {
+    void addDirect(DirectLight direct) {
       final spec = Vector4(
-        direction.x, direction.y, direction.z, _SPEC_W_DIRECTED);
+        direct.direction.x,
+        direct.direction.y,
+        direct.direction.z,
+        _SPEC_W_DIRECTED);
+      final color = Vector4(
+        direct.color.x,
+        direct.color.y,
+        direct.color.z,
+        0.0);
       addLight(spec, color);
     }
-    void addPoint(Vector3 color, Vector3 origin) {
-      final spec = Vector4(origin.x, origin.y, origin.z, _SPEC_W_POINT);
+    void addPoint(PointLight point) {
+      final spec = Vector4(
+        point.origin.x,
+        point.origin.y,
+        point.origin.z,
+        _SPEC_W_POINT);
+      final color = Vector4(
+        point.color.x,
+        point.color.y,
+        point.color.z,
+        point.fadeK);
       addLight(spec, color);
     }
     for (final direct in directs) {
-      addDirect(direct.color, direct.direction);
+      addDirect(direct);
     }
     for (final point in points) {
-      addPoint(point.color, point.origin);
+      addPoint(point);
     }
     while (lightIndex < simpleLightsCount) {
       addOff();
@@ -158,7 +177,7 @@ uniform vec3 lightsAmbient;
 // w component determines type of light
 uniform vec4 lightsSimpleSpec[$maxSimpleLights];
 
-uniform vec3 lightsSimpleColor[$maxSimpleLights];
+uniform vec4 lightsSimpleColor[$maxSimpleLights];
 
 struct LightsIntensity {
   vec3 ambient;
@@ -170,11 +189,16 @@ LightsIntensity lightsIntensity(vec3 position, vec3 normal, vec3 eye, float shin
   LightsIntensity light = LightsIntensity(lightsAmbient, vec3(0.0), vec3(0.0));
   for(int i = 0; i < $maxSimpleLights; i++) {
     vec4 lightSpec = lightsSimpleSpec[i];
+    vec4 colorSpec = lightsSimpleColor[i];
+    float fade = 1.0;
     vec3 lightDirection;
     if (lightSpec.w == $_SPEC_W_DIRECTED) {
       lightDirection = normalize(lightSpec.xyz);
     } else if (lightSpec.w == $_SPEC_W_POINT) {
-      lightDirection = normalize(lightSpec.xyz - position);
+      lightDirection = lightSpec.xyz - position;
+      float distance = length(lightDirection);
+      lightDirection = normalize(lightDirection);
+      fade = 1.0 + distance * distance * colorSpec.a;
     } else {
       // supposed to be (lightSpec.w == $_SPEC_W_OFF)
       // but we turn if off anyhow
@@ -188,7 +212,7 @@ LightsIntensity lightsIntensity(vec3 position, vec3 normal, vec3 eye, float shin
     vec3 lightViewHalf = normalize(lightDirection + viewDirection);
     float specularAngle = dot(lightViewHalf, normal);
     float specularPower = pow(max(0.0, specularAngle), shininess);
-    vec3 lightColor = lightsSimpleColor[i];
+    vec3 lightColor = colorSpec.rgb / fade;
     light.diffuse += max(0.0, lambertian) * lightColor;
     light.specular += specularPower * lambertian * lightColor;
   }
