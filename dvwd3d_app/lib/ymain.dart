@@ -54,9 +54,19 @@ class _C {
 
   static final AmbientColor = Vector3(0.02, 0.02, 0.02);
 
+  static final SceneLightsCount = 3;
+
+  static final SceneLightPoleColor = Vector3(0.2, 0.2, 0.7);
+
+  static final SceneLightPoleFade = 0.2;
+
+  static final SceneLightPole1 = GridVector(3, -6, 2);
+
+  static final SceneLightPole2 = GridVector(9, -6, 2);
+
   static final AvatarMoveTime = 640.0;
 
-  static final AvatarStartCoordinate = GridVector(3, 3, 0);
+  static final AvatarStartCoordinate = GridVector(6, 3, 0);
 
   static final AvatarStartDirection = GridAbsoluteDirection.North;
 
@@ -72,13 +82,13 @@ class _C {
 
   static final CoinDiffuseColor = Vector3(0.7, 0.3, 0.5);
 
-  static final CoinSpecularColor = Vector4(0.7, 0.2, 0.2, 0.25);
+  static final CoinSpecularColor = Vector4(0.9, 0.4, 0.4, 10.0);
 
   static final GridCellSize = 1.0;
 
   static final ZNear = 0.001;
 
-  static final ZFar = 10.0;
+  static final ZFar = 25.0;
 
   static final FovYDegrees = 75.0;
 
@@ -117,8 +127,8 @@ class TestScene03 {
 
   TestScene03._(this._glContext) {
     _assets = Assets(_glContext);
-    _gridProgram = GridProgram(_glContext);
-    _pawnProgram = PawnProgram(_glContext);
+    _gridProgram = GridProgram(_glContext, _C.SceneLightsCount);
+    _pawnProgram = PawnProgram(_glContext, _C.SceneLightsCount);
 
     final gridGeometry = GridGeometry(_C.GridCellSize);
 
@@ -130,22 +140,42 @@ class TestScene03 {
     _grid.importLayer(_GridFloor, -1);
     _grid.importLayer(_GridWalls1, 0);
     _grid.importLayer(_GridWalls2, 1);
-    _grid.importLayer(_Ceiling2, 2);
-    
-    final coin1 = GridPawn(
-      gridGeometry,
-      _assets.coinMeshData,
-      _C.CoinDiffuseColor,
-      _C.CoinSpecularColor);
-    coin1
-      ..moveTo(GridVector(3, -4, 1));
-    _pawns.add(coin1);
+    _grid.importLayer(_Ceiling1, 2);
+    _grid.importLayer(_Ceiling2, 3);
+
+    void addCoin(GridVector coordinate) {
+      final coin = GridPawn(
+        gridGeometry,
+        _assets.coinMeshData,
+        _C.CoinDiffuseColor,
+        _C.CoinSpecularColor);
+      coin
+        ..moveTo(coordinate);
+      _pawns.add(coin);
+    }
+    addCoin(GridVector(4, -7, 1));
+    addCoin(GridVector(8, -7, 1));
+
 
     _avatar = Avatar(gridGeometry);
 
     _lights.ambientColor.setFrom(_C.AmbientColor);
     _lights.pointLights.add(_avatar.lantern);
 
+    void addLightPole(GridVector coordinate) {
+      final light = PointLight();
+      light.color.setFrom(_C.SceneLightPoleColor);
+      light.fadeK = _C.SceneLightPoleFade;
+      gridGeometry.calcTranslationVector(light.origin, coordinate);
+      _lights.pointLights.add(light);
+    }
+    addLightPole(_C.SceneLightPole1);
+    addLightPole(_C.SceneLightPole2);
+
+    _trackAvatar();
+  }
+
+  void _trackAvatar() {
     _avatar.onWorldUpdate.observe(_lifetime, (_) {
       _updateFromAvatar();
     });
@@ -191,7 +221,7 @@ class TestScene03 {
   void animate(num timestamp) {
     _avatar.animate(timestamp);
     for (final pawn in _pawns) {
-      final angle = 10 * (timestamp / 1000) * (math.pi / 180);
+      final angle = 16 * (timestamp / 1000) * (math.pi / 180);
       pawn.transform.setRotation(x: angle, y: angle, z: angle);
     }
   }
@@ -378,8 +408,7 @@ class Avatar {
   }
 
   void _calcEye(Vector3 eyeOut, GridVector coordinate) {
-    _gridGeometry.calcTranslationVector(
-      eyeOut, coordinate, _gridGeometry.cellSize);
+    _gridGeometry.calcTranslationVector(eyeOut, coordinate);
     eyeOut.y += _C.AvatarHeight - _gridGeometry.cellSize / 2.0;
   }
 
@@ -410,58 +439,83 @@ class Avatar {
 }
 
 final _GridFloor = [
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 0, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 0, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
 ];
 
 final _GridWalls1 = [
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, ],
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 1, ],
-  <int>[ 1, 1, 1, 0, 0, 0, 0, 1, ],
-  <int>[ 1, 1, 0, 0, 0, 1, 0, 1, ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1 ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
 ];
 
 final _GridWalls2 = [
-  <int>[ 0, 0, 0, 1, 1, 1, 0, 0, ],
-  <int>[ 0, 1, 0, 0, 1, 1, 0, 0, ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, ],
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
-  <int>[ 1, 1, 0, 0, 0, 1, 0, 0, ],
-  <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
-  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, ],
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
 ];
 
-final _Ceiling = [
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
-  <int>[ 0, 1, 1, 1, 0, 1, 0, 0, ],
-  <int>[ 1, 0, 1, 1, 0, 0, 0, 0, ],
-  <int>[ 0, 0, 1, 1, 0, 0, 0, 0, ],
-  <int>[ 1, 1, 1, 1, 0, 1, 0, 0, ],
-  <int>[ 0, 1, 0, 0, 0, 1, 0, 0, ],
-  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, ],
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, ],
+final _Ceiling1 = [
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
 ];
 
 final _Ceiling2 = [
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
 ];
 
 abstract class Activity {

@@ -70,8 +70,8 @@ class PawnProgram {
 
   late final IndicesArray _indicesArray;
 
-  PawnProgram(this._glContext) {
-    final lightsSnippet = LightsSnippet(2);
+  PawnProgram(this._glContext, int lightCount) {
+    final lightsSnippet = LightsSnippet(lightCount);
     final source = _ProgramSource(lightsSnippet);
     _program = Program(_glContext, source);
     _lightsBinding = lightsSnippet.makeBinding(_program);

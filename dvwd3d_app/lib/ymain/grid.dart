@@ -79,8 +79,8 @@ class GridProgram {
 
   late final IndicesArray _indicesArray;
 
-  GridProgram(this._glContext) {
-    final lightsSnippet = LightsSnippet(2);
+  GridProgram(this._glContext, int lightCount) {
+    final lightsSnippet = LightsSnippet(lightCount);
     final source = _ProgramSource(lightsSnippet);
     _program = Program(_glContext, source);
     _lightsBinding = lightsSnippet.makeBinding(_program);

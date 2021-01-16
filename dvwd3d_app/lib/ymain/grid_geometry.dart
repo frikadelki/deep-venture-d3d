@@ -41,8 +41,8 @@ class GridGeometry {
   }
 
   void calcTranslationVector(
-    Vector3 vector, GridVector coordinate, double objectSize) {
-    coordinate.realWorldPoint(vector, cellSize, objectSize);
+    Vector3 vector, GridVector coordinate, [ double? objectSize ]) {
+    coordinate.realWorldPoint(vector, cellSize, objectSize ?? cellSize);
   }
 }
 
