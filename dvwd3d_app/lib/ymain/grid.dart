@@ -162,6 +162,8 @@ void main() {
 '''
 precision mediump float;
 
+const float pi = 3.1415926535897932384626433832795;
+
 ${lights.source}
 
 uniform vec3 cameraEyePosition;
@@ -178,11 +180,63 @@ varying vec2 varTexCoord;
 
 const float TCD_THRESHOLD = 0.02;
 
+const float ffScale = 0.25 * 0.25;
+
+const float ffPeriod = 4.0;
+
+const float ffXOffset = 0.125;
+
+const float ffYOffset = 0.25;
+
+float ffValue(float xx, float yy) {
+  float fValue = 
+    sin(ffPeriod * pi * (xx - ffXOffset)) + 
+    cos(ffPeriod * pi * (yy - ffYOffset)) +
+    2.0;
+  return fValue * ffScale;
+}
+
+vec3 ffNormal(float xx, float yy) {
+  vec3 vv1dx = vec3(
+    1.0, 
+    0.0, 
+    ffScale * ffPeriod * pi * cos(ffPeriod * pi * (xx - ffXOffset))
+    );
+  vec3 vv2dy = vec3(
+    0.0, 
+    1.0, 
+    ffScale * ffPeriod * pi * -sin(ffPeriod * pi * (yy - ffYOffset))
+    );
+  return normalize(cross(vv1dx, vv2dy));
+}
+
 void main() {
+  float ffx = varTexCoord.x;
+  float ffy = -varTexCoord.y;
+  float fValue = ffValue(ffx, ffy);
+  vec3 fPosition = vec3(
+    varPosition.x, 
+    varPosition.y, 
+    varPosition.z - fValue);
+  vec3 fNormal = ffNormal(ffx, ffy);
+  
+  vec3 fixedDiffuseColor = vec3(
+    modelColorDiffuse.r + fValue * 3.0,
+    modelColorDiffuse.g + fValue, 
+    modelColorDiffuse.b + fValue * 3.0);
+  vec3 fixedSpecularColor = vec3(
+    modelColorSpecular.r + fValue * 3.0,
+    modelColorSpecular.g + fValue, 
+    modelColorSpecular.b + fValue * 3.0);
+  
   LightsIntensity light = lightsIntensity(
-    varPosition, varNormal, cameraEyePosition, modelColorSpecular.w);
-  vec3 diffuseColor = (light.ambient + light.diffuse) * modelColorDiffuse;
-  vec3 specularColor = light.specular * modelColorSpecular.xyz;
+    fPosition,
+    fNormal, 
+    cameraEyePosition, 
+    modelColorSpecular.w);
+  vec3 diffuseColor = (light.ambient + light.diffuse) * fixedDiffuseColor;
+  vec3 specularColor = light.specular * fixedSpecularColor;
+  
   float tcdx = 0.5 - abs(varTexCoord.x - 0.5);
   float tcdy = 0.5 - abs(varTexCoord.y - 0.5);
   float tcdMin = min(tcdx, tcdy);
@@ -190,6 +244,7 @@ void main() {
   if (tcdMin <= TCD_THRESHOLD) {
     attune = 0.4 + 0.6 * tcdMin / TCD_THRESHOLD;
   }
+  
   vec3 color = attune * (diffuseColor + specularColor);
   gl_FragColor = vec4(color, 1.0);
 }
