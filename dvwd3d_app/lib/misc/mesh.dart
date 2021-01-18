@@ -174,6 +174,15 @@ extension MeshGeometryUtils on MeshGeometry {
     return _extractAttribute(buffer, attribute);
   }
 
+  VertexAttributeData extractTangents(gl.Buffer buffer) {
+    final attribute = getAttrib(_A_NAME_TANGENT);
+    if (attribute == null) {
+      throw ArgumentError(
+        'Mesh did not contain "$_A_NAME_TANGENT" attribute.');
+    }
+    return _extractAttribute(buffer, attribute);
+  }
+
   VertexAttributeData _extractAttribute(
     gl.Buffer buffer, VertexAttrib attribute) {
     return VertexAttributeData(

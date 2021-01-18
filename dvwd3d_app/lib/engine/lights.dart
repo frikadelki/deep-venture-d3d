@@ -186,6 +186,7 @@ struct LightsIntensity {
 };
 
 LightsIntensity lightsIntensity(vec3 position, vec3 normal, vec3 eye, float shininess) {
+  normal = normalize(normal);
   LightsIntensity light = LightsIntensity(lightsAmbient, vec3(0.0), vec3(0.0));
   for(int i = 0; i < $maxSimpleLights; i++) {
     vec4 lightSpec = lightsSimpleSpec[i];
@@ -208,13 +209,13 @@ LightsIntensity lightsIntensity(vec3 position, vec3 normal, vec3 eye, float shin
     if (lambertian <= 0.0) {
       continue;
     }
-    vec3 viewDirection = eye - position;
+    vec3 viewDirection = normalize(eye - position);
     vec3 lightViewHalf = normalize(lightDirection + viewDirection);
     float specularAngle = dot(lightViewHalf, normal);
     float specularPower = pow(max(0.0, specularAngle), shininess);
     vec3 lightColor = colorSpec.rgb / fade;
-    light.diffuse += max(0.0, lambertian) * lightColor;
-    light.specular += specularPower * lambertian * lightColor;
+    light.diffuse += lambertian * lightColor;
+    light.specular += specularPower * lightColor;
   }
   return light;
 }

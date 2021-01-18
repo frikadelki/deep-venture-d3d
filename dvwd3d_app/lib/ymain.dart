@@ -74,15 +74,15 @@ class _C {
   
   static final AvatarLanternColor = Vector3(0.5, 0.4, 0.2);
 
-  static final AvatarLanternFade = 0.4;
+  static final AvatarLanternFade = 0.3;
 
   static final CubeDiffuseColor = Vector3(0.2, 0.7, 0.3);
 
-  static final CubeSpecularColor = Vector4(0.2, 0.7, 0.2, 0.25);
+  static final CubeSpecularColor = Vector4(0.2, 0.7, 0.2, 16.0);
 
   static final CoinDiffuseColor = Vector3(0.7, 0.3, 0.5);
 
-  static final CoinSpecularColor = Vector4(0.9, 0.4, 0.4, 10.0);
+  static final CoinSpecularColor = Vector4(0.9, 0.4, 0.4, 32.0);
 
   static final GridCellSize = 1.0;
 
@@ -427,13 +427,14 @@ class Avatar {
     final tmp = Vector3.zero()
       ..setFrom(up)
       ..normalize()
-      ..scale(-0.2);
+      ..scale(-0.1);
     lantern.origin
       ..setFrom(_worldDirection)
       ..normalize()
-      ..scale(0.2)
+      ..scale(0.1)
       ..add(eye)
-      ..add(tmp);
+      ..add(tmp)
+      ;
     _onWorldUpdate.signal(null);
   }
 }
