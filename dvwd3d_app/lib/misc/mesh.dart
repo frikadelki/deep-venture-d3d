@@ -12,6 +12,8 @@ abstract class MeshData {
 
   VertexAttributeData get texCoordData;
 
+  VertexAttributeData get tangentsInfoData;
+
   IndicesArrayData get indices;
 }
 
@@ -27,6 +29,9 @@ class CubeMeshData implements MeshData, DisposableBuffers {
   @override
   final VertexAttributeData texCoordData;
 
+  @override
+  final VertexAttributeData tangentsInfoData;
+
   final gl.Buffer _indicesGlBuffer;
 
   @override
@@ -37,6 +42,7 @@ class CubeMeshData implements MeshData, DisposableBuffers {
     this.positionsData,
     this.normalsData,
     this.texCoordData,
+    this.tangentsInfoData,
     this._indicesGlBuffer,
     this.indices);
 
@@ -44,7 +50,7 @@ class CubeMeshData implements MeshData, DisposableBuffers {
     final hSize = size / 2.0;
     final cubeGenerator = CubeGenerator();
     final cubeFlags = GeometryGeneratorFlags(
-      texCoords: true, normals: true, tangents: false);
+      texCoords: true, normals: true, tangents: true);
     final mesh = cubeGenerator.createCube(
       hSize, hSize, hSize, flags: cubeFlags);
 
@@ -53,6 +59,7 @@ class CubeMeshData implements MeshData, DisposableBuffers {
     final positionsData = mesh.extractPositions(attributesBuffer);
     final normalsData = mesh.extractNormals(attributesBuffer);
     final texCoordData = mesh.extractTexCoord(attributesBuffer);
+    final tangentData = mesh.extractTangents(attributesBuffer);
 
     final indicesBuffer = glContext.createBuffer();
     mesh.bindIndicesData(glContext, indicesBuffer);
@@ -63,6 +70,7 @@ class CubeMeshData implements MeshData, DisposableBuffers {
       positionsData,
       normalsData,
       texCoordData,
+      tangentData,
       indicesBuffer,
       indicesData);
   }
@@ -86,6 +94,9 @@ class CylinderMeshData implements MeshData, DisposableBuffers {
   @override
   final VertexAttributeData texCoordData;
 
+  @override
+  final VertexAttributeData tangentsInfoData;
+
   final gl.Buffer _indicesGlBuffer;
 
   @override
@@ -96,6 +107,7 @@ class CylinderMeshData implements MeshData, DisposableBuffers {
     this.positionsData,
     this.normalsData,
     this.texCoordData,
+    this.tangentsInfoData,
     this._indicesGlBuffer,
     this.indices);
 
@@ -103,7 +115,7 @@ class CylinderMeshData implements MeshData, DisposableBuffers {
     gl.RenderingContext glContext, double radius, double thickness) {
     final cylinderGenerator = CylinderGenerator();
     final flags = GeometryGeneratorFlags(
-      texCoords: true, normals: true, tangents: false);
+      texCoords: true, normals: true, tangents: true);
     final mesh = cylinderGenerator.createCylinder(
       radius, radius, thickness, segments: 32, flags: flags);
 
@@ -112,6 +124,7 @@ class CylinderMeshData implements MeshData, DisposableBuffers {
     final positionsData = mesh.extractPositions(attributesBuffer);
     final normalsData = mesh.extractNormals(attributesBuffer);
     final texCoordData = mesh.extractTexCoord(attributesBuffer);
+    final tangentData = mesh.extractTangents(attributesBuffer);
 
     final indicesBuffer = glContext.createBuffer();
     mesh.bindIndicesData(glContext, indicesBuffer);
@@ -122,6 +135,7 @@ class CylinderMeshData implements MeshData, DisposableBuffers {
       positionsData,
       normalsData,
       texCoordData,
+      tangentData,
       indicesBuffer,
       indicesData);
   }

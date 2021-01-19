@@ -73,6 +73,8 @@ class GridProgram {
 
   late final VertexAttribute _texCoord;
 
+  late final VertexAttribute _tangentsInfo;
+
   late final Uniform _modelColorDiffuse;
 
   late final Uniform _modelColorSpecular;
@@ -91,6 +93,7 @@ class GridProgram {
     _position = _program.getVertexAttribute('position');
     _normal = _program.getVertexAttribute('normal');
     _texCoord = _program.getVertexAttribute('texCoord');
+    _tangentsInfo = _program.getVertexAttribute('tangentsInfo');
     _modelColorDiffuse = _program.getUniform('modelColorDiffuse');
     _modelColorSpecular = _program.getUniform('modelColorSpecular');
     _indicesArray = IndicesArray(_glContext);
@@ -113,6 +116,7 @@ class GridProgram {
     _position.data = meshData.positionsData;
     _normal.data = meshData.normalsData;
     _texCoord.data = meshData.texCoordData;
+    _tangentsInfo.data = meshData.tangentsInfoData;
     _indicesArray.data = meshData.indices;
     _normalsMatrix.data = Matrix4UniformData(Matrix4.identity());
     for (final voxel in grid._voxels) {
@@ -144,13 +148,25 @@ attribute vec3 normal;
 
 attribute vec2 texCoord;
 
+// vec4 bitangent = cross(normal, tangent.xyz) * tangent.w
+attribute vec4 tangentsInfo;
+
 varying vec3 varPosition;
 
 varying vec3 varNormal;
 
 varying vec2 varTexCoord;
 
+varying mat3 varTBN;
+
 void main() {
+  vec3 tangent = tangentsInfo.xyz;
+  vec3 bitangent = cross(normal, tangent) * tangentsInfo.w;
+  vec3 T = normalize(vec3(normalsMatrix * vec4(tangent,   0.0)));
+  vec3 B = normalize(vec3(normalsMatrix * vec4(bitangent, 0.0)));
+  vec3 N = normalize(vec3(normalsMatrix * vec4(normal,    0.0)));
+  varTBN = mat3(T, B, N);
+
   vec4 worldPosition = modelMatrix * vec4(position, 1.0);
   varPosition = vec3(worldPosition) / worldPosition.w;
   varNormal = normalize(normalsMatrix * vec4(normal, 0.0)).xyz;
@@ -177,6 +193,8 @@ varying vec3 varPosition;
 varying vec3 varNormal;
 
 varying vec2 varTexCoord;
+
+varying mat3 varTBN;
 
 const float TCD_THRESHOLD = 0.02;
 
@@ -212,13 +230,12 @@ vec3 ffNormal(float xx, float yy) {
 
 void main() {
   float ffx = varTexCoord.x;
-  float ffy = -varTexCoord.y;
+  float ffy = varTexCoord.y;
   float fValue = ffValue(ffx, ffy);
-  vec3 fPosition = vec3(
-    varPosition.x, 
-    varPosition.y, 
-    varPosition.z - fValue);
+  vec3 fPositionShift = varTBN * vec3(0.0, 0.0, fValue);
+  vec3 fPosition = varPosition + fPositionShift;
   vec3 fNormal = ffNormal(ffx, ffy);
+  fNormal = normalize(varTBN * fNormal);
   
   vec3 fixedDiffuseColor = vec3(
     modelColorDiffuse.r + fValue * 3.0,
