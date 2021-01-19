@@ -14,38 +14,51 @@ import 'ymain/grid_geometry.dart';
 import 'ymain/pawn.dart';
 
 class TestScene_03_Delegate implements SceneDelegate {
+  final _lifetime = PlainLifetime();
+
   final gl.RenderingContext _glContext;
 
-  late final TestScene03 _scene;
+  TestScene03? _scene;
 
   TestScene_03_Delegate(this._glContext) {
-    _scene = TestScene03(_glContext);
+    _scene = TestScene03(_lifetime, _glContext);
   }
 
   @override
   void onKeyDown(SceneKeyCode code) {
-    _scene.handleAction(code);
+    _checkDisposed();
+    _scene!.handleAction(code);
   }
 
   @override
   void animate(num timestamp) {
-    _scene.animate(timestamp);
+    _checkDisposed();
+    _scene!.animate(timestamp);
   }
 
   @override
   void render() {
-    _scene.draw();
+    _checkDisposed();
+    _scene!.draw();
   }
 
   @override
   void resize(int width, int height) {
-    _glContext.viewport(0, 0, width, height);
-    _scene.resize(width, height);
+    _checkDisposed();
+    _scene!.resize(width, height);
   }
 
   @override
   void dispose() {
-    _scene.dispose();
+    _checkDisposed();
+    _lifetime.terminate();
+    _scene = null;
+  }
+
+  void _checkDisposed() {
+    if (_lifetime.isTerminated) {
+      throw StateError('This scene was disposed of.');
+    }
   }
 }
 
@@ -95,8 +108,88 @@ class _C {
   static final FovYRadians = math.pi * FovYDegrees / 180.0;
 }
 
+final _GridFloor = [
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+];
+
+final _GridWalls1 = [
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1 ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+];
+
+final _GridWalls2 = [
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+];
+
+final _Ceiling1 = [
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+  <int>[ 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
+  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 ],
+  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
+];
+
+final _Ceiling2 = [
+  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
+];
+
 class TestScene03 {
-  final _lifetime = PlainLifetime();
+  final Lifetime _lifetime;
 
   final gl.RenderingContext _glContext;
 
@@ -116,16 +209,16 @@ class TestScene03 {
 
   final _camera = Camera();
 
-  factory TestScene03(gl.RenderingContext glContext) {
+  factory TestScene03(Lifetime lifetime, gl.RenderingContext glContext) {
     try {
-      return TestScene03._(glContext);
+      return TestScene03._(lifetime, glContext);
     } on ProgramException catch (e) {
       print('Exception while loading test scene 3:\n${e.reason}\n${e.infoLog}');
       rethrow;
     }
   }
 
-  TestScene03._(this._glContext) {
+  TestScene03._(this._lifetime, this._glContext) {
     _assets = Assets(_glContext);
     _gridProgram = GridProgram(_glContext, _C.SceneLightsCount);
     _pawnProgram = PawnProgram(_glContext, _C.SceneLightsCount);
@@ -173,17 +266,23 @@ class TestScene03 {
     addLightPole(_C.SceneLightPole2);
 
     _trackAvatar();
+    
+    _lifetime.add(_dispose);
+  }
+
+  void _dispose() {
+    _gridProgram.dispose();
+    _pawnProgram.dispose();
+    _assets.dispose();
   }
 
   void _trackAvatar() {
-    _avatar.onWorldUpdate.observe(_lifetime, (_) {
-      _updateFromAvatar();
-    });
-    _updateFromAvatar();
-  }
-
-  void _updateFromAvatar() {
-    _camera.setLookAt(_avatar.eye, _avatar.lookAt, _avatar.up);
+    void update(void _) {
+      _camera.setLookAt(_avatar.eye, _avatar.lookAt, _avatar.up);
+    }
+    
+    _avatar.onWorldUpdate.observe(_lifetime, update);
+    update(null);
   }
 
   void handleAction(SceneKeyCode code) {
@@ -234,16 +333,16 @@ class TestScene03 {
     _glContext.clearColorFrom(_C.ClearColor);
     _glContext.clear(gl.WebGL.COLOR_BUFFER_BIT | gl.WebGL.DEPTH_BUFFER_BIT);
 
-    drawGrid();
-    drawPawns();
+    _drawGrid();
+    _drawPawns();
   }
 
-  void drawGrid() {
+  void _drawGrid() {
     _gridProgram.setup(_lights, _camera);
     _gridProgram.draw(_grid);
   }
 
-  void drawPawns() {
+  void _drawPawns() {
     _pawnProgram.setup(_lights, _camera);
     for (final pawn in _pawns) {
       _pawnProgram.draw(pawn);
@@ -253,12 +352,7 @@ class TestScene03 {
   void resize(int width, int height) {
     final aspectRatio = width / height;
     _camera.setPerspective(_C.FovYRadians, aspectRatio, _C.ZNear, _C.ZFar);
-  }
-
-  void dispose() {
-    _gridProgram.dispose();
-    _pawnProgram.dispose();
-    _assets.dispose();
+    _glContext.viewport(0, 0, width, height);
   }
 }
 
@@ -435,89 +529,10 @@ class Avatar {
       ..add(eye)
       ..add(tmp)
       ;
+    //lantern.origin.setFrom(eye);
     _onWorldUpdate.signal(null);
   }
 }
-
-final _GridFloor = [
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-];
-
-final _GridWalls1 = [
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1 ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1 ],
-  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
-  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-];
-
-final _GridWalls2 = [
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1 ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-];
-
-final _Ceiling1 = [
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-  <int>[ 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1 ],
-  <int>[ 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1 ],
-  <int>[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ],
-];
-
-final _Ceiling2 = [
-  <int>[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-  <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
-];
 
 abstract class Activity {
   bool get finished;
