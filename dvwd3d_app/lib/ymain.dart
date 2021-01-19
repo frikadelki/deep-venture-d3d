@@ -13,15 +13,15 @@ import 'ymain/grid.dart';
 import 'ymain/grid_geometry.dart';
 import 'ymain/pawn.dart';
 
-class TestScene_03_Delegate implements SceneDelegate {
+class YMain_SceneDelegate implements SceneDelegate {
   final _lifetime = PlainLifetime();
 
   final gl.RenderingContext _glContext;
 
-  TestScene03? _scene;
+  YMainScene? _scene;
 
-  TestScene_03_Delegate(this._glContext) {
-    _scene = TestScene03(_lifetime, _glContext);
+  YMain_SceneDelegate(this._glContext) {
+    _scene = YMainScene(_lifetime, _glContext);
   }
 
   @override
@@ -188,7 +188,7 @@ final _Ceiling2 = [
   <int>[ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0 ],
 ];
 
-class TestScene03 {
+class YMainScene {
   final Lifetime _lifetime;
 
   final gl.RenderingContext _glContext;
@@ -209,16 +209,16 @@ class TestScene03 {
 
   final _camera = Camera();
 
-  factory TestScene03(Lifetime lifetime, gl.RenderingContext glContext) {
+  factory YMainScene(Lifetime lifetime, gl.RenderingContext glContext) {
     try {
-      return TestScene03._(lifetime, glContext);
+      return YMainScene._(lifetime, glContext);
     } on ProgramException catch (e) {
-      print('Exception while loading test scene 3:\n${e.reason}\n${e.infoLog}');
+      print('Exception while loading ymain scene:\n${e.reason}\n${e.infoLog}');
       rethrow;
     }
   }
 
-  TestScene03._(this._lifetime, this._glContext) {
+  YMainScene._(this._lifetime, this._glContext) {
     _assets = Assets(_glContext);
     _gridProgram = GridProgram(_glContext, _C.SceneLightsCount);
     _pawnProgram = PawnProgram(_glContext, _C.SceneLightsCount);

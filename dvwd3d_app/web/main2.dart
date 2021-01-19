@@ -14,7 +14,7 @@ void main() {
   final canvas = findCanvas('#main-render-canvas');
   //runRenderOnCanvas(canvas, (glContext) => TestScene_01_Delegate(glContext));
   //runRenderOnCanvas(canvas, (glContext) => TestScene_02_Delegate(glContext));
-  runRenderOnCanvas(canvas, (glContext) => TestScene_03_Delegate(glContext));
+  runRenderOnCanvas(canvas, (glContext) => YMain_SceneDelegate(glContext));
 }
 
 void runRenderOnCanvas(
